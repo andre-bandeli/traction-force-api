@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container-fluid py-5 bg-light-gradient" style="min-height: 80vh;">
+    <div class="container">
+        <div class="row align-items-center">
+            <!-- Illustration Column -->
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="text-center">
+                    <img src="https://media.istockphoto.com/id/1451084434/pt/foto/male-farmer-and-agronomist-using-digital-tablet-while-standing-in-corn-field-against-sky.jpg?s=612x612&w=0&k=20&c=DXC6P-5sfVs0F8vz-lXtWXI0U0FGmMnJZnjmNiNUhms=" 
+                         alt="Agricultura de precisão" class="img-fluid rounded-3 shadow">
+                    <div class="mt-5">
+                        <h4 class="fw-bold text-dark">Sistema Profissional de Gestão Agrícola</h4>
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success rounded-circle p-2 me-3">
+                                        <i class="bi bi-check-lg text-white"></i>
+                                    </div>
+                                    <span>Controle de operações</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success rounded-circle p-2 me-3">
+                                        <i class="bi bi-check-lg text-white"></i>
+                                    </div>
+                                    <span>Análises precisas</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success rounded-circle p-2 me-3">
+                                        <i class="bi bi-check-lg text-white"></i>
+                                    </div>
+                                    <span>Relatórios detalhados</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success rounded-circle p-2 me-3">
+                                        <i class="bi bi-check-lg text-white"></i>
+                                    </div>
+                                    <span>Otimização de recursos</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Login Form Column -->
+            <div class="col-lg-6">
+                <div class="card shadow-lg border-0 rounded-3">
+                    <div class="card-header bg-primary text-white text-center py-4 rounded-top-3">
+                        <h3 class="fw-bold mb-0">Acessar o Sistema</h3>
+                        <p class="mb-0">Entre com suas credenciais para acessar a plataforma</p>
+                    </div>
+                    <div class="card-body p-5">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                <label for="username" class="form-label fw-semibold">Usuário</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-primary"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" id="username" name="username" 
+                                           placeholder="Digite seu usuário" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-semibold">Senha</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-lock text-primary"></i>
+                                    </span>
+                                    <input type="password" class="form-control border-start-0" id="password" name="password" 
+                                           placeholder="Digite sua senha" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4 form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">Lembrar-me</label>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg rounded-2 fw-semibold py-3">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Entrar no Sistema
+                                </button>
+                            </div>
+                            
+                            {% if form.errors %}
+                            <div class="alert alert-danger mt-4" role="alert">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                Usuário ou senha incorretos. Por favor, tente novamente.
+                            </div>
+                            {% endif %}
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <a href="#" class="text-decoration-none">Esqueci minha senha</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- WhatsApp Contact Card -->
+                <div class="card mt-4 border-0 shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="bg-success rounded-circle p-3 me-3">
+                                <i class="bi bi-whatsapp text-white fs-4"></i>
+                            </div>
+                            <div class="text-start">
+                                <h5 class="fw-bold mb-0">Não tem acesso?</h5>
+                                <p class="mb-0">Fale com nosso representante</p>
+                            </div>
+                        </div>
+                        <p class="text-muted">Entre em contato via WhatsApp para adquirir seu acesso ao sistema</p>
+                        <a href="https://wa.me/5511999999999?text=Olá,%20gostaria%20de%20adquirir%20acesso%20ao%20sistema%20AgriTech" 
+                           class="btn btn-success rounded-2 fw-semibold" target="_blank">
+                            <i class="bi bi-whatsapp me-2"></i>Falar com Representante
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-light-gradient {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .card {
+        border: none;
+        border-radius: 12px;
+    }
+    
+    .input-group-text {
+        border-right: none;
+    }
+    
+    .form-control:focus {
+        box-shadow: none;
+        border-color: #ced4da;
+    }
+    
+    .btn-success {
+        background-color: #25D366;
+        border-color: #25D366;
+    }
+    
+    .btn-success:hover {
+        background-color: #128C7E;
+        border-color: #128C7E;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Realizar Novo Cálculo</h2>
+    <p>Selecione um solo e um implemento para realizar os cálculos propostos na aula.</p>
+
+    {% if user.solo_set.count == 0 or user.implemento_set.count == 0 %}
+        <div class="alert alert-warning" role="alert">
+            Você precisa cadastrar pelo menos um <a href="{% url 'criar_solo' %}" class="alert-link">solo</a> e um <a href="{% url 'criar_implemento' %}" class="alert-link">implemento</a> antes de realizar um cálculo.
+        </div>
+    {% else %}
+        <form method="post">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button type="submit" class="btn btn-primary mt-3">Calcular</button>
+        </form>
+    {% endif %}
+
+    {% if resultado %}
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Resultado do Cálculo</h5>
+            <p class="card-text">{{ resultado }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

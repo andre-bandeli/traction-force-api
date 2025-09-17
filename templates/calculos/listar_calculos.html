@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Histórico de Cálculos</h2>
+    <a href="{% url 'realizar_calculo' %}" class="btn btn-primary mb-3">Novo Cálculo</a>
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Solo Utilizado</th>
+                <th>Implemento Utilizado</th>
+                <th>Resultado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for calculo in calculos %}
+            <tr>
+                <td>{{ calculo.data_criacao|date:"d/m/Y H:i" }}</td>
+                <td>{{ calculo.solo.nome }}</td>
+                <td>{{ calculo.implemento.nome }}</td>
+                <td>{{ calculo.resultado }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">Nenhum cálculo realizado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

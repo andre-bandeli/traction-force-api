@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Meus Solos</h2>
+    <a href="{% url 'criar_solo' %}" class="btn btn-primary mb-3">Novo Solo</a>
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Coesão (kPa)</th>
+                <th>Ângulo de Atrito (graus)</th>
+                <th>Peso Específico (kN/m³)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for solo in solos %}
+            <tr>
+                <td>{{ solo.nome }}</td>
+                <td>{{ solo.coesao }}</td>
+                <td>{{ solo.angulo_atrito_interno }}</td>
+                <td>{{ solo.peso_especifico }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">Nenhum solo cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
