@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-)hhiq0x-1auy)6+&13t$bnegk!%a#9eg3afs(&)1^r-j+5rnka
 DEBUG = True
 
 ALLOWED_HOSTS = ["dynasystem.onrender.com", "localhost", "127.0.0.1"]
-CSRF_TRUSTED_ORIGINS = ["https://dynasystem.onrender.com"]
+CSRF_TRUSTED_ORIGINS = ["https://dynasystem.onrender.com", "http://127.0.0.1:8000", "http://localhost"]
 
 
 
