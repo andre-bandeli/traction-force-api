@@ -20,8 +20,98 @@ from reportlab.graphics.charts.linecharts import SampleHorizontalLineChart
 G = Decimal('9.81')  # m/s^2
 
 # --- Funções Auxiliares de Cálculo ---
-def _calculate_coefficients(solo, implemento, d):
-    """Calcula os coeficientes adimensionais para ferramentas de dente."""
+
+def _calculate_beta_critico(m, alpha):
+    """
+    Calcula β crítico conforme:
+    βcrit = arctg(1/(m-cotα))
+    """
+    try:
+        cot_alpha = Decimal(1) / Decimal(math.tan(alpha)) if math.tan(alpha) != 0 else Decimal('inf')
+        if m <= cot_alpha:
+            raise ValueError("m deve ser maior que cot(α) para calcular βcrit")
+        beta_crit = Decimal(math.atan(1 / (m - cot_alpha)))
+        return beta_crit
+    except (ValueError, ZeroDivisionError) as e:
+        raise Exception(f"Erro no cálculo de βcrit: {str(e)}")
+
+def _calculate_coefficients(solo, implemento, d, w):
+    """Calcula os coeficientes adimensionais seguindo exatamente a metodologia."""
+    try:
+        # Converter todos os valores para float para cálculos, depois para Decimal
+        c = Decimal(str(solo.coesao))
+        fi_deg = Decimal(str(solo.angulo_atrito_interno))
+        fi_rad = Decimal(math.radians(float(fi_deg)))
+        gama = Decimal(str(solo.peso_especifico))
+        q_sobrecarga = Decimal(str(solo.sobrecarga))
+        ca = Decimal(str(solo.adesao))
+        
+        alpha_deg = Decimal(str(implemento.angulo_ataque))
+        alpha_rad = Decimal(math.radians(float(alpha_deg)))
+        
+        delta_deg = Decimal(str(implemento.angulo_atrito_implemento))
+        delta_rad = Decimal(math.radians(float(delta_deg)))
+        
+        m = Decimal(str(implemento.m_val))
+        d_dec = Decimal(str(d))
+        w_dec = Decimal(str(w))
+
+        # Calcular β crítico
+        beta = _calculate_beta_critico(m, float(alpha_rad))
+    
+        cot_alpha = Decimal(1) / Decimal(math.tan(float(alpha_rad))) if math.tan(float(alpha_rad)) != 0 else Decimal('inf')
+        cot_beta_fi = Decimal(1) / Decimal(math.tan(float(beta + fi_rad))) if math.tan(float(beta + fi_rad)) != 0 else Decimal('inf')
+        
+        cos_alpha_delta = Decimal(math.cos(float(alpha_rad + delta_rad)))
+        sin_alpha_delta = Decimal(math.sin(float(alpha_rad + delta_rad)))
+        
+        denominador = (cos_alpha_delta + sin_alpha_delta * cot_beta_fi)
+        if denominador == 0:
+            raise ZeroDivisionError("Denominador zero no cálculo dos coeficientes.")
+
+        # Cálculo do termo r
+        r = d_dec * (cot_alpha + cot_beta_fi)
+        
+        # Cálculo dos adimensionais
+        Ny = (r / (Decimal('2') * d_dec)) / denominador
+        Nc = (Decimal('1') + (Decimal('1') / Decimal(math.tan(float(beta)))) * cot_beta_fi) / denominador if math.tan(float(beta)) != 0 else Decimal('inf')
+        Nq = (r / d_dec) / denominador
+        Na = (Decimal('1') - cot_alpha * cot_beta_fi) / denominador
+
+        # Para ferramentas muito estreitas - coeficientes N' (Terzaghi modificado)
+        sin_fi = Decimal(math.sin(float(fi_rad)))
+        tan_fi = Decimal(math.tan(float(fi_rad))) if math.tan(float(fi_rad)) != 0 else Decimal('0.001')
+        
+        Kp = (Decimal('1') + sin_fi) / (Decimal('1') - sin_fi)
+        exp_pi_tan_fi = Decimal(math.exp(math.pi * float(tan_fi)))
+        
+        Nc_prime = ((Kp * exp_pi_tan_fi) - Decimal('1')) / tan_fi
+        Nq_prime = Kp
+        
+        # η para N'q conforme
+        eta = (Decimal(math.pi) / Decimal('4')) - (fi_rad / Decimal('2'))
+        Nq_prime_eta = Kp * Decimal(math.exp(math.pi * math.tan(float(eta))))
+
+        return Ny, Nc, Nq, Na, Nc_prime, Nq_prime, Nq_prime_eta, beta
+    except Exception as e:
+        raise Exception(f"Erro nos cálculos de coeficientes: {str(e)}")
+
+def _calculate_velocidade_critica(w, d):
+    """
+    Calcula a velocidade crítica conforme:
+    Vcrit = √(5*g*(w+0.6*d))
+    """
+    try:
+        vcrit = Decimal(math.sqrt(5 * float(G) * float(w + Decimal('0.6') * d)))
+        return vcrit
+    except Exception as e:
+        raise Exception(f"Erro no cálculo da velocidade crítica: {str(e)}")
+
+def _calculate_profundidade_critica(solo, implemento, d, w):
+    """
+    Calcula a profundidade crítica (dc) usando a aproximação de Godwin conforme.
+    dc = (-b ± √(b²-4*a*c')) / (2*a)
+    """
     try:
         c = Decimal(str(solo.coesao))
         fi = math.radians(Decimal(str(solo.angulo_atrito_interno)))
@@ -29,208 +119,295 @@ def _calculate_coefficients(solo, implemento, d):
         q_sobrecarga = Decimal(str(solo.sobrecarga))
         ca = Decimal(str(solo.adesao))
         alpha = math.radians(Decimal(str(implemento.angulo_ataque)))
-        beta = math.radians(Decimal(str(implemento.angulo_plano_falha)))
         delta = math.radians(Decimal(str(implemento.angulo_atrito_implemento)))
         m = Decimal(str(implemento.m_val))
-    except (ValueError, TypeError):
-        raise ValueError("Dados de entrada para cálculo de coeficientes são inválidos. Verifique os valores numéricos.")
-
-    try:
+        
+        # Obter coeficientes
+        Ny, Nc, Nq, Na, Nc_prime, Nq_prime, Nq_prime_eta, beta = _calculate_coefficients(solo, implemento, d, w)
+        
+        # Cálculo dos termos a, b, c'
         cot_alpha = Decimal(1) / Decimal(math.tan(alpha)) if math.tan(alpha) != 0 else Decimal('inf')
-        cot_beta_fi = Decimal(1) / Decimal(math.tan(beta + fi)) if math.tan(beta + fi) != 0 else Decimal('inf')
         
-        denominador = (Decimal(math.cos(alpha + delta)) + Decimal(math.sin(alpha + delta)) * cot_beta_fi)
-        if denominador == 0:
-            raise ZeroDivisionError("Denominador zero no cálculo dos coeficientes.")
-
-        r = d * (cot_alpha + cot_beta_fi)
-        Ny = (r / (Decimal(2) * d)) / denominador
-        Nc = (Decimal(1) + (Decimal(1) / Decimal(math.tan(beta))) * cot_beta_fi) / denominador if math.tan(beta) != 0 else Decimal('inf')
-        Nq = (r / d) / denominador
+        sin_acos_term = Decimal(math.sin(math.acos(float(cot_alpha / m)))) if m != 0 and abs(cot_alpha / m) <= 1 else Decimal(0)
         
-        Nca = (Decimal(1) - cot_alpha * cot_beta_fi) / denominador
-
-        Kp = (Decimal(1) + Decimal(math.sin(fi))) / (Decimal(1) - Decimal(math.sin(fi)))
-        Nc_prime = ((Kp * Decimal(math.exp(math.pi * math.tan(fi)))) - Decimal(1)) / Decimal(math.tan(fi)) if math.tan(fi) != 0 else Decimal(0)
-        Nq_prime = Kp
+        # a = 3*γ*Nγ*sin(α + δ)*m*sin(cos^-1(cotα/m))
+        a = Decimal('3') * gama * Ny * Decimal(math.sin(alpha + delta)) * m * sin_acos_term
         
-        # Coeficiente Na para o termo de velocidade
-        denominador_Na = (Decimal(math.cos(alpha + delta)) + Decimal(math.sin(alpha + delta)) * cot_beta_fi) * (Decimal(1) + (Decimal(1) / Decimal(math.tan(beta))) * cot_alpha)
-        Na = (Decimal(math.tan(beta)) + cot_beta_fi) / denominador_Na if denominador_Na != 0 else Decimal(0)
+        # b = 2*(c*Nc+q*Nq)*m*sin(cos^-1(cotα/m))*sin(α + δ)+2*γ*Nγ*sin(α + δ)*w-(1-senφ)*γ*w*Nq'
+        sin_fi = Decimal(math.sin(fi))
+        b = (Decimal('2') * (c * Nc + q_sobrecarga * Nq) * m * sin_acos_term * Decimal(math.sin(alpha + delta)) + 
+             Decimal('2') * gama * Ny * Decimal(math.sin(alpha + delta)) * w - 
+             (Decimal('1') - sin_fi) * gama * w * Nq_prime)
+        
+        # c' = (c*Nc + Ca*Na + q*Nq)*sin(α + δ)*w+Ca*c*cosα-w*c*Nc'
+        c_prime = ((c * Nc + ca * Na + q_sobrecarga * Nq) * Decimal(math.sin(alpha + delta)) * w + 
+                   ca * c * Decimal(math.cos(alpha)) - w * c * Nc_prime)
+        
+        # Resolver equação quadrática
+        discriminant = b**2 - Decimal('4') * a * c_prime
+        
+        if discriminant < 0:
+            return d
+            
+        sqrt_discriminant = Decimal(math.sqrt(float(discriminant)))
+        
+        # Escolher a raiz com menor magnitude (positiva)
+        dc1 = (-b + sqrt_discriminant) / (Decimal('2') * a)
+        dc2 = (-b - sqrt_discriminant) / (Decimal('2') * a)
+        
+        if dc1 > 0 and dc2 > 0:
+            dc = min(dc1, dc2)
+        elif dc1 > 0:
+            dc = dc1
+        elif dc2 > 0:
+            dc = dc2
+        else:
+            dc = d 
+            
+        return dc if dc <= d else d
+        
+    except Exception as e:
+        raise Exception(f"Erro no cálculo da profundidade crítica: {str(e)}")
 
-        return Ny, Nc, Nq, Nca, Nc_prime, Nq_prime, Na
-    except (ValueError, ZeroDivisionError) as e:
-        raise Exception(f"Erro nos cálculos de coeficientes: {str(e)}")
-
-
-def _calculate_tine_force(solo, implemento, incluir_velocidade, velocidade_kmh):
-    """Calcula a força de tração para implementos de dente (simples ou múltiplas)."""
+def _calculate_tine_force(solo, implemento, incluir_velocidade=False, velocidade_kmh=None):
+    """
+    Calcula a força de tração para implementos de dente seguindo EXATAMENTE a metodologia.
+    """
     w = Decimal(str(implemento.largura))
     d = Decimal(str(implemento.profundidade))
     d_over_w = d / w if w > 0 else Decimal('inf')
     
-    P_total = Decimal('0.00')
-    profundidade_critica_valida = d
-    
-    # Parâmetros necessários para todas as categorias
     c = Decimal(str(solo.coesao))
     fi = math.radians(Decimal(str(solo.angulo_atrito_interno)))
     gama = Decimal(str(solo.peso_especifico))
     q_sobrecarga = Decimal(str(solo.sobrecarga))
+    ca = Decimal(str(solo.adesao))
+    alpha = math.radians(Decimal(str(implemento.angulo_ataque)))
+    delta = math.radians(Decimal(str(implemento.angulo_atrito_implemento)))
+    m = Decimal(str(implemento.m_val))
     
-    # --- CÁLCULO PARA FERRAMENTAS LARGAS (d/w < 0.5) ---
+    profundidade_critica = d
+    
+    # 1º DETERMINAR O TIPO DE FERRAMENTA
     if d_over_w < Decimal('0.5'):
-        Ny, Nc, Nq, _, _, _, _ = _calculate_coefficients(solo, implemento, d, w)
-        # Adesão e inércia são desprezados para ferramentas largas
-        H_t = (gama * d**2 * Ny + c * d * Nc + q_sobrecarga * d * Nq) * w
-        P_total = H_t
-
-    # --- CÁLCULO PARA FERRAMENTAS ESTREITAS (1 <= d/w <= 6) ---
+        # --- FERRAMENTAS LARGAS ---
+        # Desprezamos adesão e inércia, apenas equação de Reece
+        Ny, Nc, Nq, _, _, _, _, _ = _calculate_coefficients(solo, implemento, d, w)
+        P = (gama * d**2 * Ny + c * d * Nc + q_sobrecarga * d * Nq) * w
+        
     elif Decimal('1') <= d_over_w <= Decimal('6'):
-        Ny, Nc, Nq, Nca, _, _, Na = _calculate_coefficients(solo, implemento, d, w)
-        H_t = (gama * d**2 * Ny + c * d * Nc + Decimal(str(solo.adesao)) * d * Nca + q_sobrecarga * d * Nq) * w
-
+        # --- FERRAMENTAS ESTREITAS ---
+        # Primeiro calcular velocidade crítica
         if incluir_velocidade and velocidade_kmh is not None:
             v_ms = Decimal(str(velocidade_kmh)) / Decimal('3.6')
-            termo_velocidade = (gama * v_ms**2 / G) * Na * d * (w + Decimal('0.6') * d)
-            H_t += termo_velocidade
+            v_crit = _calculate_velocidade_critica(w, d)
             
-        P_total = H_t
-        
-    # --- CÁLCULO PARA FERRAMENTAS MUITO ESTREITAS (d/w > 6) ---
-    elif d_over_w > Decimal('6'):
-        Ny, Nc, Nq, Nca, Nc_prime, Nq_prime, Na = _calculate_coefficients(solo, implemento, d, w)
-        alpha = math.radians(Decimal(str(implemento.angulo_ataque)))
-        delta = math.radians(Decimal(str(implemento.angulo_atrito_implemento)))
-        m = Decimal(str(implemento.m_val))
-        ca = Decimal(str(solo.adesao))
-
-        try:
-            # Cálculo da profundidade crítica (dc)
-            acos_arg = Decimal(math.tan(alpha) / m) if m != 0 else Decimal('inf')
+            Ny, Nc, Nq, Na, _, _, _, _ = _calculate_coefficients(solo, implemento, d, w)
             
-            # Coeficientes a, b e c'
-            a = Decimal('3') * gama * Ny * m * Decimal(math.sin(math.acos(acos_arg))) * Decimal(math.sin(alpha + delta))
-            b = (Decimal('2') * (c * Nc + q_sobrecarga * Nq) * m * Decimal(math.sin(math.acos(acos_arg))) * Decimal(math.sin(alpha + delta)) + 
-                 Decimal('2') * gama * Ny * w * Decimal(math.sin(alpha + delta)) - (Decimal('1') - Decimal(math.sin(fi))) * gama * w * Nq_prime)
-            c_prime = (c * Nc + ca * Nca + q_sobrecarga * Nq) * w * Decimal(math.sin(alpha + delta)) + ca * c * Decimal(math.cos(alpha)) - w * c * Nc_prime
-            
-            discriminant = b**2 - Decimal('4') * a * c_prime
-            if discriminant < 0:
-                dc = d
+            if v_ms < v_crit:
+                # v < Vcrit: sem efeito da velocidade
+                # Vt e Ht
+                base_force = (gama * d**2 * Ny + c * d * Nc)
+                largura_efetiva = w + d * (m - (Decimal('1')/Decimal('3')) * (m - Decimal('1')))
+                
+                Vt = base_force * largura_efetiva * Decimal(math.cos(alpha + delta))
+                Ht = base_force * largura_efetiva * Decimal(math.sin(alpha + delta))
+                P = Ht 
+                
             else:
-                dc_val = (-b + Decimal(math.sqrt(discriminant))) / (Decimal('2') * a)
-                dc = Decimal(dc_val) if dc_val > 0 else d # Garante que a profundidade crítica é positiva
-
-        except (ValueError, ZeroDivisionError) as e:
-            dc = d
-        
-        profundidade_critica_valida = dc if dc < d else d
-        
-        # Força Horizontal (Ht = H + Q)
-        H_t_base = (gama * profundidade_critica_valida**2 * Ny + c * profundidade_critica_valida * Nc + q_sobrecarga * profundidade_critica_valida * Nq) * (w + d * (m - Decimal('1') / Decimal('3') * (m - Decimal('1')))) * Decimal(math.sin(alpha + delta))
-        Q = w * c * Nc_prime * (d - profundidade_critica_valida) + Decimal('0.5') * (Decimal('1') - Decimal(math.sin(fi))) * gama * w * Nq_prime * (d**2 - profundidade_critica_valida**2)
-        
-        H_t = H_t_base + Q
-        
-        if incluir_velocidade and velocidade_kmh is not None:
-            v_ms = Decimal(str(velocidade_kmh)) / Decimal('3.6')
-            termo_velocidade = (gama * v_ms**2 / G) * Na * d * (w + Decimal('0.6') * d)
-            H_t += termo_velocidade
+                # v > Vcrit: levar em conta efeito da adesão
+                base_force = (gama * d**2 * Ny + c * d * Nc + ca * d * Na + q_sobrecarga * d * Nq)
+                largura_efetiva = w + d * (m - (Decimal('1')/Decimal('3')) * (m - Decimal('1')))
+                P = base_force * largura_efetiva * Decimal(math.sin(alpha + delta))
+        else:
+            # Sem consideração de velocidade
+            Ny, Nc, Nq, Na, _, _, _, _ = _calculate_coefficients(solo, implemento, d, w)
+            base_force = (gama * d**2 * Ny + c * d * Nc + ca * d * Na + q_sobrecarga * d * Nq)
+            largura_efetiva = w + d * (m - (Decimal('1')/Decimal('3')) * (m - Decimal('1')))
+            P = base_force * largura_efetiva * Decimal(math.sin(alpha + delta))
             
-        P_total = H_t
+    else:  # d_over_w > 6
+        # --- FERRAMENTAS MUITO ESTREITAS ---
+        dc = _calculate_profundidade_critica(solo, implemento, d, w)
+        profundidade_critica = dc
+        
+        Ny, Nc, Nq, Na, Nc_prime, Nq_prime, _, _ = _calculate_coefficients(solo, implemento, dc, w)
+        
+        # Verificar se dc >= d (sem efeito da zona de fratura inferior)
+        if dc >= d:
+            # Usar metodologia de ferramenta estreita
+            if incluir_velocidade and velocidade_kmh is not None:
+                v_ms = Decimal(str(velocidade_kmh)) / Decimal('3.6')
+                v_crit = _calculate_velocidade_critica(w, d)
+                
+                if v_ms >= v_crit:
+                    base_force = (gama * d**2 * Ny + c * d * Nc + ca * d * Na + q_sobrecarga * d * Nq)
+                else:
+                    base_force = (gama * d**2 * Ny + c * d * Nc)
+            else:
+                base_force = (gama * d**2 * Ny + c * d * Nc + ca * d * Na + q_sobrecarga * d * Nq)
+            
+            largura_efetiva = w + d * (m - (Decimal('1')/Decimal('3')) * (m - Decimal('1')))
+            P = base_force * largura_efetiva * Decimal(math.sin(alpha + delta))
+        else:
+            # dc < d: considerar zona de fratura inferior
+            # Calcular H até profundidade crítica
+            base_force = (gama * dc**2 * Ny + c * dc * Nc + ca * dc * Na + q_sobrecarga * dc * Nq)
+            largura_efetiva = w + dc * (m - (Decimal('1')/Decimal('3')) * (m - Decimal('1')))
+            H = base_force * largura_efetiva * Decimal(math.sin(alpha + delta))
+            
+            # Calcular Q (efeito da zona de fratura inferior)
+            sin_fi = Decimal(math.sin(fi))
+            Q = (w * c * Nc_prime * (d - dc) + 
+                 Decimal('0.5') * (Decimal('1') - sin_fi) * gama * w * Nq_prime * (d**2 - dc**2))
+            
+            # Ht = H + Q
+            P = H + Q
+            
+            # Consideração de velocidade para ferramentas muito estreitas
+            if incluir_velocidade and velocidade_kmh is not None:
+                v_ms = Decimal(str(velocidade_kmh)) / Decimal('3.6')
+                v_crit = _calculate_velocidade_critica(w, d)
+                
+                if v_ms >= v_crit:
+                    # Adicionar termo de velocidade (aproximação)
+                    termo_velocidade = (gama * v_ms**2 / G) * Na * d * (w + Decimal('0.6') * d)
+                    P += termo_velocidade
+    
+    return P, profundidade_critica
 
-    # --- CÁLCULO PARA MÚLTIPLAS FERRAMENTAS ---
+def _calculate_multiple_tines(solo, implemento, P_single, profundidade_utilizada):
+    """
+    Calcula força para múltiplas ferramentas seguindo metodologia.
+    """
     n = implemento.numero_ferramentas
-    s = implemento.espacamento
-    if n > 1 and s is not None:
-        d_i = d - Decimal(str(s)) / Decimal('2')
-        Ny_i, Nc_i, Nq_i, Nca_i, _, _, _ = _calculate_coefficients(solo, implemento, d_i, w)
+    s = Decimal(str(implemento.espacamento))
+    d = profundidade_utilizada  # Usar dc para muito estreitas, d para outras
+    
+    # Verificar sobreposição
+    if d < s / Decimal('2'):
+        # Não há sobreposição
+        D = P_single * n
+        return D
+    else:
+        # Há sobreposição - calcular ferramenta virtual
+        d_i = d - s / Decimal('2')  # Profundidade da ferramenta virtual
         
-        Hi = (gama * d_i**2 * Ny_i + c * d_i * Nc_i + Decimal(str(solo.adesao)) * d_i * Nca_i + q_sobrecarga * d_i * Nq_i) * w
+        # Calcular força da ferramenta virtual
+        w = Decimal(str(implemento.largura))
         
-        P_total = n * P_total - (n - 1) * Hi
+        # Criar implemento virtual temporário para cálculo
+        class ImplementoVirtual:
+            def __init__(self, implemento_orig, nova_prof):
+                self.largura = implemento_orig.largura
+                self.profundidade = float(nova_prof)
+                self.angulo_ataque = implemento_orig.angulo_ataque
+                self.angulo_atrito_implemento = implemento_orig.angulo_atrito_implemento
+                self.m_val = implemento_orig.m_val
+                self.tipo = implemento_orig.tipo
         
-    return P_total, profundidade_critica_valida
+        implemento_virtual = ImplementoVirtual(implemento, d_i)
+        
+        P_virtual, _ = _calculate_tine_force(solo, implemento_virtual, False, None)
+        
+        # Corrigir resultado com profundidade virtual
+        D = (P_single * n) - ((n - 1) * P_virtual)
+        
+        return D
 
 def _calculate_disc_force(solo, implemento):
-    """Calcula as forças de tração para implementos de disco."""
+    """
+    Calcula as forças de tração para implementos de disco seguindo.
+    """
     try:
-        R = Decimal(str(implemento.raio_disco))
-        theta = Decimal(str(math.radians(float(implemento.angulo_varredura))))  # Converter para Decimal
-        lambd = Decimal(str(math.radians(float(implemento.angulo_clareira))))   # Converter para Decimal
-        x = Decimal(str(implemento.raio_disco))
+        # Parâmetros do disco - converter tudo para float para cálculos
+        R = float(implemento.raio_disco)
+        theta_deg = float(implemento.angulo_varredura)
+        theta_rad = math.radians(theta_deg)
+        lambd_deg = float(implemento.angulo_clareira)
+        lambd_rad = math.radians(lambd_deg)
+        d = float(implemento.profundidade)
         
-        c = Decimal(str(solo.coesao))
-        fi = Decimal(str(math.radians(float(solo.angulo_atrito_interno))))      # Converter para Decimal
-        gama = Decimal(str(solo.peso_especifico))
-        q_sobrecarga = Decimal(str(solo.sobrecarga))
-        ca = Decimal(str(solo.adesao))
-        
-        alpha_disc = Decimal(str(math.radians(20)))                             # Converter para Decimal
-        delta_disc = Decimal(str(math.radians(20)))                             # Converter para Decimal
+        # Usar largura do implemento ou raio como fallback
+        if hasattr(implemento, 'largura') and implemento.largura:
+            x = float(implemento.largura)
+        else:
+            x = R  # Fallback para raio do disco
 
-        # Cálculo da Força Passiva - converter funções math para Decimal
-        tan_fi = Decimal(str(math.tan(float(fi))))
-        sin_alpha_delta = Decimal(str(math.sin(float(alpha_disc + delta_disc))))
-        cos_alpha_delta = Decimal(str(math.cos(float(alpha_disc + delta_disc))))
-        sin_theta = Decimal(str(math.sin(float(theta))))
-        cos_theta = Decimal(str(math.cos(float(theta))))
+        # Parâmetros do solo - converter para float
+        c = float(solo.coesao)
+        fi_deg = float(solo.angulo_atrito_interno)
+        fi_rad = math.radians(fi_deg)
+        gama = float(solo.peso_especifico)
+        q_sobrecarga = float(solo.sobrecarga)
+        ca = float(solo.adesao)
         
-        # P = (gama * (Decimal('2') * R - Decimal('1'))**2 * Decimal('1') + 
-        #      c * (Decimal('2') * R - Decimal('1')) * Decimal('1') + 
-        #      q_sobrecarga * (Decimal('2') * R - Decimal('1')) * Decimal('1')) * tan_fi
+        # Ângulos para disco
+        sigma_rad = math.radians(45)  # Ângulo no meio da corda
+        alpha_disc_deg = float(implemento.angulo_ataque)
+        alpha_disc_rad = math.radians(alpha_disc_deg)
+        delta_disc_deg = float(implemento.angulo_atrito_implemento)
+        delta_disc_rad = math.radians(delta_disc_deg)
 
-        # Obter os coeficientes adimensionais para a profundidade d
-        Ny, Nc, Nq, Nca, _, _, _ = _calculate_coefficients(solo, implemento, d=Decimal(str(implemento.profundidade)), w=Decimal('1.0'))
+        # 1. Força na cara interna do disco
+        W = 2 * math.sqrt(2 * R * d - d**2)
+        l = W * math.sin(theta_rad)
         
-        # Calcular o comprimento de corte efetivo (l)
-        d = Decimal(str(implemento.profundidade))
-        W = Decimal('2') * Decimal(math.sqrt(Decimal('2') * R * d - d**2))
-        l = W * Decimal(math.sin(float(theta)))
-
-        # Força Passiva P, usando a equação de Reece do material da Aula 7
-        P = (gama * d**2 * Ny + c * d * Nc + ca * d * Nca + q_sobrecarga * d * Nq) * l
-             
-        Dp = P * sin_alpha_delta * sin_theta
-        Vp = -P * cos_alpha_delta
-        Sp = P * sin_alpha_delta * cos_theta
-
-        # Cálculo da Força de Esfrega (Scrubbing)
-        sin_fi = Decimal(str(math.sin(float(fi))))
-        tan_fi_val = Decimal(str(math.tan(float(fi))))
-        exp_val = Decimal(str(math.exp(math.pi * float(tan_fi_val))))
+        # Coeficientes simplificados para disco
+        sin_fi = math.sin(fi_rad)
+        cos_fi = math.cos(fi_rad)
+        tan_fi = sin_fi / cos_fi if cos_fi != 0 else 0.001
         
-        Kp = (Decimal('1') + sin_fi) / (Decimal('1') - sin_fi)
-        Nc_prime = ((Kp * exp_val) - Decimal('1')) / tan_fi_val if tan_fi_val != 0 else Decimal('0')
+        # Coeficientes de capacidade de carga para disco
+        Nc_disc = (math.exp(math.pi * tan_fi) * (math.tan(math.pi/4 + fi_rad/2)**2) - 1) / tan_fi
+        Nq_disc = math.exp(math.pi * tan_fi) * (math.tan(math.pi/4 + fi_rad/2)**2)
+        
+        # Força P na cara interna
+        P_interno = (gama * d * Nq_disc + c * Nc_disc) * l * math.sin(theta_rad)
+
+        # Componentes da força P
+        Dp_interno = P_interno * math.sin(sigma_rad) * math.sin(theta_rad)
+        Vp_interno = -P_interno * math.cos(sigma_rad)
+        Sp_interno = P_interno * math.sin(sigma_rad) * math.cos(theta_rad)
+        
+        # 2. Força na cara externa do disco (Teoria de Terzaghi)
+        A = math.pi * R * x
+
+        # Coeficientes de Terzaghi
+        Kp = (1 + sin_fi) / (1 - sin_fi)
+        exp_term = math.exp(math.pi * tan_fi)
+        Nc_prime = ((Kp * exp_term) - 1) / tan_fi if tan_fi != 0 else 0
+
         q_prime = Nc_prime * c
-        
-        A = Decimal(str(math.pi)) * R * x
-        
-        sin_val = Decimal(str(math.sin(math.pi * float(lambd - theta) / (2 * float(lambd)))))
-        Vs = q_prime * A * sin_val
-        
-        tan_alpha_delta_diff = Decimal(str(math.tan(float(alpha_disc - delta_disc))))
-        sin_lambd_theta = Decimal(str(math.sin(float(lambd - theta))))
-        cos_lambd_theta = Decimal(str(math.cos(float(lambd - theta))))
-        
-        Ds = Vs * tan_alpha_delta_diff * sin_lambd_theta
-        Ss = Vs * tan_alpha_delta_diff * cos_lambd_theta
 
-        # Forças totais
-        D_total = Dp + Ds
-        V_total = Vp + Vs
-        S_total = Sp - Ss
-
-    except (ValueError, TypeError, ZeroDivisionError) as e:
+        # Força na cara externa
+        if theta_deg <= lambd_deg:
+            sin_relation = math.sin(math.pi * (lambd_deg - theta_deg) / (2 * lambd_deg))
+            Vs_externo = q_prime * A * sin_relation
+        else:
+            Vs_externo = 0
+        
+        # Componentes da força externa
+        tan_diff = math.tan(alpha_disc_rad - delta_disc_rad)
+        sin_lambd_theta = math.sin(lambd_rad - theta_rad)
+        cos_lambd_theta = math.cos(lambd_rad - theta_rad)
+        
+        Ds_externo = Vs_externo * tan_diff * sin_lambd_theta
+        Ss_externo = Vs_externo * tan_diff * cos_lambd_theta
+        
+        # 3. Forças totais (converter de volta para Decimal para consistência)
+        D_total = Decimal(str(Dp_interno + Ds_externo))
+        V_total = Decimal(str(Vp_interno + Vs_externo))
+        S_total = Decimal(str(Sp_interno - Ss_externo))
+        
+        return D_total, V_total, S_total
+        
+    except Exception as e:
         raise Exception(f"Erro nos cálculos para implementos de disco: {str(e)}")
-
-    return D_total, V_total, S_total
-
+    
 def _optimize_tractor(trator, forca_tracao, velocidade_kmh):
     """
-    Realiza os cálculos de otimização de tração com base em um modelo simplificado.
-    NOTA: As fórmulas a seguir são simplificadas. Substitua-as pelas suas equações completas.
+    Realiza os cálculos de otimização de tração.
     """
     try:
         massa_trator_kg = Decimal(str(trator.massa_trator))
@@ -238,24 +415,25 @@ def _optimize_tractor(trator, forca_tracao, velocidade_kmh):
         lastro_atual = Decimal(str(trator.lastro_atual)) if trator.lastro_atual is not None else Decimal(0)
 
         # Conversões
-        forca_tracao_N = forca_tracao * Decimal('1000') # kN para N
-        velocidade_ms = velocidade_kmh / Decimal('3.6') # km/h para m/s
+        forca_tracao_N = forca_tracao * Decimal('1000')
+        velocidade_ms = velocidade_kmh / Decimal('3.6')
         
         # Patinagem
-        patinagem_porcentagem = (forca_tracao_N / (massa_trator_kg * G * Decimal('0.8') + lastro_atual * G * Decimal('0.8'))) * Decimal('100')
-        patinagem_porcentagem = patinagem_porcentagem if patinagem_porcentagem >= 0 else Decimal(0)
+        peso_total = (massa_trator_kg + lastro_atual) * G
+        forca_disponivel = peso_total * Decimal('0.8')  # Coeficiente de tração
+        patinagem_porcentagem = (forca_tracao_N / forca_disponivel) * Decimal('100')
+        patinagem_porcentagem = max(patinagem_porcentagem, Decimal('0'))
         
         # Eficiência de Tração
         eficiencia_tracao = Decimal('0.85') - patinagem_porcentagem / Decimal('200')
-        eficiencia_tracao_porcentagem = eficiencia_tracao * Decimal('100')
-        eficiencia_tracao_porcentagem = eficiencia_tracao_porcentagem if eficiencia_tracao_porcentagem <= 100 else Decimal(100)
+        eficiencia_tracao_porcentagem = max(min(eficiencia_tracao * Decimal('100'), Decimal('100')), Decimal('0'))
         
         # Potência Necessária
         potencia_necessaria_kW = (forca_tracao_N * velocidade_ms) / Decimal('1000')
         potencia_necessaria_cv = potencia_necessaria_kW / Decimal('0.7457')
         
         # Lastro Ideal
-        lastro_ideal_kg = (forca_tracao_N / (G * Decimal('0.8'))) - massa_trator_kg
+        lastro_ideal_kg = max((forca_tracao_N / (G * Decimal('0.8'))) - massa_trator_kg, Decimal('0'))
         
         return {
             'patinagem_calculada': patinagem_porcentagem.quantize(Decimal('0.01')),
@@ -264,10 +442,10 @@ def _optimize_tractor(trator, forca_tracao, velocidade_kmh):
             'lastro_ideal_kg': lastro_ideal_kg.quantize(Decimal('0.01')),
         }
     except Exception as e:
-        messages.error(f'Erro na otimização do trator: {e}')
-        return None
+        raise Exception(f'Erro na otimização do trator: {e}')
 
-# --- Views ---
+# --- Views (mantidas iguais, apenas mudando as chamadas das funções) ---
+
 @login_required
 def criar_solo(request):
     if request.method == 'POST':
@@ -387,13 +565,27 @@ def realizar_calculo(request):
             
             profundidade_critica = None
 
-            # --- FLUXO DE CÁLCULO DO IMPLEMENTO ---
+            # --- FLUXO DE CÁLCULO DO IMPLEMENTO SEGUINDO ---
             if implemento.tipo == 'dente':
-                D_implemento, profundidade_critica = _calculate_tine_force(
+                # Calcular força para uma ferramenta
+                D_single, profundidade_critica = _calculate_tine_force(
                     solo, implemento, incluir_velocidade, velocidade_kmh
                 )
+                
+                # Verificar se há múltiplas ferramentas
+                if implemento.numero_ferramentas and implemento.numero_ferramentas > 1:
+                    # Usar profundidade crítica para ferramentas muito estreitas, profundidade normal para outras
+                    w = Decimal(str(implemento.largura))
+                    d = Decimal(str(implemento.profundidade))
+                    d_over_w = d / w if w > 0 else Decimal('inf')
+                    
+                    profundidade_para_multiplas = profundidade_critica if d_over_w > Decimal('6') else d
+                    D_implemento = _calculate_multiple_tines(solo, implemento, D_single, profundidade_para_multiplas)
+                else:
+                    D_implemento = D_single
+                    
             elif implemento.tipo == 'disco':
-                D_implemento, _, _ = _calculate_disc_force(solo, implemento)
+                D_implemento, V_total, S_total = _calculate_disc_force(solo, implemento)
             else:
                 raise ValueError("Tipo de implemento inválido.")
 
@@ -401,10 +593,11 @@ def realizar_calculo(request):
             if trator and velocidade_kmh:
                 resultado_trator = _optimize_tractor(trator, D_implemento, velocidade_kmh)
             
-            # Arredondar e salvar o resultado
+            # Formatar resultado
             resultado_implemento = f"Força de Tração Total: {D_implemento:.2f} kN"
             resultado_db = D_implemento
 
+            # Salvar cálculo
             calculo_salvo = Calculo.objects.create(
                 usuario=request.user,
                 solo=solo,
@@ -419,17 +612,46 @@ def realizar_calculo(request):
             messages.success(request, 'Cálculo realizado e salvo com sucesso!')
             form = CalculoForm(request.user)
             
+            # Adicionar informações de diagnóstico
+            w = Decimal(str(implemento.largura))
+            d = Decimal(str(implemento.profundidade))
+            d_over_w = d / w if w > 0 else Decimal('inf')
+            
+            tipo_ferramenta = ""
+            if implemento.tipo == 'dente':
+                if d_over_w < Decimal('0.5'):
+                    tipo_ferramenta = "Ferramenta Larga (d/w < 0.5)"
+                elif Decimal('1') <= d_over_w <= Decimal('6'):
+                    tipo_ferramenta = "Ferramenta Estreita (1 ≤ d/w ≤ 6)"
+                elif d_over_w > Decimal('6'):
+                    tipo_ferramenta = "Ferramenta Muito Estreita (d/w > 6)"
+                else:
+                    tipo_ferramenta = f"Intermediária (d/w = {d_over_w:.2f})"
+            
+            # Verificar velocidade crítica se aplicável
+            info_velocidade = ""
+            if incluir_velocidade and velocidade_kmh and implemento.tipo == 'dente' and d_over_w >= Decimal('1'):
+                v_crit = _calculate_velocidade_critica(w, d)
+                v_ms = Decimal(str(velocidade_kmh)) / Decimal('3.6')
+                if v_ms < v_crit:
+                    info_velocidade = f"Velocidade ({v_ms:.2f} m/s) < Vcrit ({v_crit:.2f} m/s) - Sem efeito da adesão por velocidade"
+                else:
+                    info_velocidade = f"Velocidade ({v_ms:.2f} m/s) ≥ Vcrit ({v_crit:.2f} m/s) - Com efeito da adesão por velocidade"
+            
             context.update({
                 'form': form,
                 'resultado': resultado_implemento, 
                 'profundidade_critica': profundidade_critica,
                 'velocidade_kmh': velocidade_kmh,
-                'resultado_trator': resultado_trator
+                'resultado_trator': resultado_trator,
+                'tipo_ferramenta': tipo_ferramenta,
+                'info_velocidade': info_velocidade,
+                'd_over_w': f"{d_over_w:.2f}" if d_over_w != Decimal('inf') else "∞"
             })
             return render(request, 'calculos/realizar_calculo.html', context)
             
         except (ValueError, TypeError, ZeroDivisionError) as e:
-            mensagem_erro = f"Ocorreu um erro no cálculo. Verifique se os dados de entrada são válidos. Detalhe técnico: {e}"
+            mensagem_erro = f"Erro no cálculo. Verifique os dados de entrada. Detalhe: {e}"
             messages.error(request, mensagem_erro)
         except Exception as e:
             mensagem_erro = f"Erro inesperado: {str(e)}"
@@ -478,138 +700,169 @@ def gerar_relatorio_pdf(request, calculo_id):
 
     # Cabeçalho do Documento
     story.append(Paragraph("DynaTech", styles['HeaderStyle']))
-    story.append(Paragraph("Relatório de Otimização de Tração", styles['TitleStyle']))
-    story.append(Paragraph(f"<b>Gerado para:</b> {request.user.get_full_name()}", styles['BodyStyle']))
-    story.append(Paragraph(f"<b>Data:</b> {calculo.data_criacao.strftime('%d/%m/%Y %H:%M')}", styles['BodyStyle']))
+    story.append(Paragraph("Otimização Trator-Implemento", styles['HeaderStyle']))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph("Relatório de Cálculo", styles['TitleStyle']))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(f"<b>Usuário:</b> {request.user.get_full_name()}", styles['BodyStyle']))
+    story.append(Paragraph(f"<b>Data do Cálculo:</b> {calculo.data_criacao.strftime('%d/%m/%Y %H:%M')}", styles['BodyStyle']))
     story.append(Spacer(1, 12))
 
+    # Classificação da Ferramenta
+    if calculo.implemento.tipo == 'dente':
+        w = Decimal(str(calculo.implemento.largura))
+        d = Decimal(str(calculo.implemento.profundidade))
+        d_over_w = d / w if w > 0 else Decimal('inf')
+        
+        story.append(Paragraph("<b>Classificação da Ferramenta</b>", styles['SubtitleStyle']))
+        story.append(Paragraph(f"<b>Razão d/w:</b> {d_over_w:.2f}", styles['BodyStyle']))
+        
+        if d_over_w < Decimal('0.5'):
+            tipo_class = "Ferramenta Larga (d/w < 0.5)"
+            metodo = "Equação de Reece simplificada (despreza adesão e inércia)"
+        elif Decimal('1') <= d_over_w <= Decimal('6'):
+            tipo_class = "Ferramenta Estreita (1 ≤ d/w ≤ 6)"
+            metodo = "Equação de Reece com efeito dos flancos laterais"
+        else:
+            tipo_class = "Ferramenta Muito Estreita (d/w > 6)"
+            metodo = "Equação de Reece com zona de fratura inferior (Godwin)"
+            
+        story.append(Paragraph(f"<b>Classificação:</b> {tipo_class}", styles['BodyStyle']))
+        story.append(Paragraph(f"<b>Metodologia Aplicada:</b> {metodo}", styles['BodyStyle']))
+        story.append(Spacer(1, 12))
+
     # Informações do Solo
-    story.append(Paragraph("<b>Dados do Solo</b>", styles['SubtitleStyle']))
+    story.append(Paragraph("<b>Parâmetros do Solo</b>", styles['SubtitleStyle']))
     solo_data = [
         ["Nome:", calculo.solo.nome],
-        ["Coesão (kPa):", calculo.solo.coesao],
-        ["Ângulo de Atrito Interno (º):", calculo.solo.angulo_atrito_interno],
-        ["Peso Específico (kN/m³):", calculo.solo.peso_especifico],
-        ["Sobrecarga (kPa):", calculo.solo.sobrecarga],
-        ["Adesão (kPa):", calculo.solo.adesao]
+        ["Coesão (c) [kPa]:", f"{calculo.solo.coesao}"],
+        ["Ângulo de Atrito Interno (φ) [°]:", f"{calculo.solo.angulo_atrito_interno}"],
+        ["Peso Específico (γ) [kN/m³]:", f"{calculo.solo.peso_especifico}"],
+        ["Sobrecarga (q) [kPa]:", f"{calculo.solo.sobrecarga}"],
+        ["Adesão (Ca) [kPa]:", f"{calculo.solo.adesao}"]
     ]
-    solo_table = Table(solo_data)
+    solo_table = Table(solo_data, colWidths=[3*72, 2*72])
     solo_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold')
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey)
     ]))
     story.append(solo_table)
     story.append(Spacer(1, 12))
 
-    # Informações do Implemento e Classificação
-    story.append(Paragraph("<b>Dados do Implemento</b>", styles['SubtitleStyle']))
+    # Informações do Implemento
+    story.append(Paragraph("<b>Parâmetros do Implemento</b>", styles['SubtitleStyle']))
     implemento_data = [
         ["Nome:", calculo.implemento.nome],
-        ["Largura (m):", calculo.implemento.largura],
-        ["Profundidade (m):", calculo.implemento.profundidade]
+        ["Largura (w) [m]:", f"{calculo.implemento.largura}"],
+        ["Profundidade (d) [m]:", f"{calculo.implemento.profundidade}"],
+        ["Tipo:", calculo.implemento.tipo.title()],
+        ["Ângulo de Ataque (α) [°]:", f"{calculo.implemento.angulo_ataque}"],
+        ["Ângulo de Atrito (δ) [°]:", f"{calculo.implemento.angulo_atrito_implemento}"],
+        ["Parâmetro m:", f"{calculo.implemento.m_val}"]
     ]
-    if calculo.implemento.tipo:
-        implemento_data.append(["Tipo:", calculo.implemento.tipo])
-    if calculo.implemento.numero_ferramentas:
-        implemento_data.append(["Número de Ferramentas:", calculo.implemento.numero_ferramentas])
-    if calculo.implemento.espacamento:
-        implemento_data.append(["Espaçamento (m):", calculo.implemento.espacamento])
     
-    implemento_table = Table(implemento_data)
+    if calculo.implemento.numero_ferramentas:
+        implemento_data.append(["Número de Ferramentas:", f"{calculo.implemento.numero_ferramentas}"])
+    if calculo.implemento.espacamento:
+        implemento_data.append(["Espaçamento [m]:", f"{calculo.implemento.espacamento}"])
+    
+    implemento_table = Table(implemento_data, colWidths=[3*72, 2*72])
     implemento_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold')
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey)
     ]))
     story.append(implemento_table)
     story.append(Spacer(1, 12))
-    
-    # Classificação da ferramenta
-    if calculo.implemento.tipo == 'dente':
-        d_over_w = calculo.implemento.profundidade / calculo.implemento.largura if calculo.implemento.largura > 0 else Decimal('inf')
-        tipo_ferramenta = ""
-        if d_over_w < Decimal('0.5'):
-            tipo_ferramenta = "Ferramenta Larga (d/w < 0.5)"
-        elif Decimal('1') <= d_over_w <= Decimal('6'):
-            tipo_ferramenta = "Ferramenta Estreita (1 <= d/w <= 6)"
-        else:
-            tipo_ferramenta = "Ferramenta Muito Estreita (d/w > 6)"
-        story.append(Paragraph(f"<b>Classificação da Ferramenta:</b> {tipo_ferramenta}", styles['BodyStyle']))
-        story.append(Spacer(1, 12))
 
-    # Resultados e Condições do Cálculo
-    story.append(Paragraph("<b>Resultados do Cálculo do Implemento</b>", styles['SubtitleStyle']))
+    # Resultados do Cálculo
+    story.append(Paragraph("<b>Resultados do Cálculo</b>", styles['SubtitleStyle']))
     story.append(Paragraph(f"<b>Força de Tração Total:</b> {calculo.resultado:.2f} kN", styles['BodyStyle']))
     
-    if calculo.profundidade_critica:
-        story.append(Paragraph(f"<b>Profundidade Crítica:</b> {calculo.profundidade_critica:.2f} m", styles['BodyStyle']))
+    if calculo.profundidade_critica and calculo.profundidade_critica != calculo.implemento.profundidade:
+        story.append(Paragraph(f"<b>Profundidade Crítica (dc):</b> {calculo.profundidade_critica:.3f} m", styles['BodyStyle']))
+        story.append(Paragraph(f"<b>Profundidade de Operação (d):</b> {calculo.implemento.profundidade} m", styles['BodyStyle']))
+        if calculo.profundidade_critica < Decimal(str(calculo.implemento.profundidade)):
+            story.append(Paragraph("⚠️ <b>Zona de fratura inferior ativa</b> (dc < d)", styles['BodyStyle']))
+        else:
+            story.append(Paragraph("✓ Sem zona de fratura inferior (dc ≥ d)", styles['BodyStyle']))
     
     if calculo.velocidade_kmh:
-        story.append(Paragraph(f"<b>Velocidade de Operação Utilizada:</b> {calculo.velocidade_kmh:.2f} km/h", styles['BodyStyle']))
-        story.append(Paragraph("O cálculo da força de tração considerou o efeito da velocidade.", styles['BodyStyle']))
-    else:
-        story.append(Paragraph("O cálculo da força de tração não considerou o efeito da velocidade de operação.", styles['BodyStyle']))
+        if calculo.velocidade_kmh is not None:
+            velocidade_kmh = float(calculo.velocidade_kmh)
+            velocidade_ms = velocidade_kmh / 3.6
+            story.append(Paragraph(f"<b>Velocidade de Operação:</b> {velocidade_kmh:.2f} km/h ({velocidade_ms:.2f} m/s)", styles['BodyStyle']))
+        else:
+            story.append(Paragraph("<b>Velocidade de Operação:</b> Não informada", styles['BodyStyle']))
+        
+        # Calcular e mostrar velocidade crítica se aplicável
+        if calculo.implemento.tipo == 'dente' and d_over_w >= Decimal('1'):
+            try:
+                v_crit = _calculate_velocidade_critica(w, d)
+                v_ms = Decimal(str(calculo.velocidade_kmh)) / Decimal('3.6')
+                story.append(Paragraph(f"<b>Velocidade Crítica (Vcrit):</b> {v_crit:.2f} m/s", styles['BodyStyle']))
+                if v_ms >= v_crit:
+                    story.append(Paragraph("Efeito da adesão por velocidade considerado (v ≥ Vcrit)", styles['BodyStyle']))
+                else:
+                    story.append(Paragraph("Efeito da adesão por velocidade não aplicado (v < Vcrit)", styles['BodyStyle']))
+            except:
+                pass
+    
+    # Múltiplas ferramentas
+    if calculo.implemento.numero_ferramentas and calculo.implemento.numero_ferramentas > 1:
+        story.append(Spacer(1, 6))
+        story.append(Paragraph(f"<b>Análise de Múltiplas Ferramentas:</b>", styles['SubtitleStyle']))
+        story.append(Paragraph(f"<b>Número de ferramentas:</b> {calculo.implemento.numero_ferramentas}", styles['BodyStyle']))
+        story.append(Paragraph(f"<b>Espaçamento:</b> {calculo.implemento.espacamento} m", styles['BodyStyle']))
+        
+        # Verificar sobreposição
+        prof_analise = calculo.profundidade_critica if calculo.profundidade_critica else Decimal(str(calculo.implemento.profundidade))
+        s = Decimal(str(calculo.implemento.espacamento))
+        
+        if prof_analise < s / Decimal('2'):
+            story.append(Paragraph("Sem sobreposição entre flancos (d < s/2)", styles['BodyStyle']))
+            story.append(Paragraph("Força total = Força unitária × Número de ferramentas", styles['BodyStyle']))
+        else:
+            story.append(Paragraph("⚠️ Com sobreposição entre flancos (d > s/2)", styles['BodyStyle']))
+            story.append(Paragraph("Correção aplicada usando ferramenta virtual", styles['BodyStyle']))
+    
     story.append(Spacer(1, 12))
     
     # Resultados do Trator
     if calculo.trator:
-        story.append(Paragraph("<b>Resultados da Otimização do Trator</b>", styles['SubtitleStyle']))
+        story.append(Paragraph("<b>Otimização do Trator</b>", styles['SubtitleStyle']))
         trator_data = [
-            ["Patinagem Calculada:", f"{calculo.patinagem_calculada:.2f} %"],
-            ["Eficiência de Tração:", f"{calculo.eficiencia_tracao_calculada:.2f} %"],
-            ["Potência Necessária:", f"{calculo.potencia_necessaria_cv:.2f} CV"],
-            ["Lastro Ideal:", f"{calculo.lastro_ideal_kg:.2f} kg"]
+            ["Trator:", calculo.trator.nome],
+            ["Massa [kg]:", f"{calculo.trator.massa_trator}"],
+            ["Potência [CV]:", f"{calculo.trator.potencia_motor}"],
+            ["", ""],
+            ["Patinagem Calculada [%]:", f"{calculo.patinagem_calculada:.2f}" if calculo.patinagem_calculada is not None else "N/A"],
+            ["Eficiência de Tração [%]:", f"{calculo.eficiencia_tracao_calculada:.2f}" if calculo.eficiencia_tracao_calculada is not None else "N/A"],
+            ["Potência Necessária [CV]:", f"{calculo.potencia_necessaria_cv:.2f}" if calculo.potencia_necessaria_cv is not None else "N/A"],
+            ["Lastro Ideal [kg]:", f"{calculo.lastro_ideal_kg:.2f}" if calculo.lastro_ideal_kg is not None else "N/A"]
         ]
-        trator_table = Table(trator_data)
+        trator_table = Table(trator_data, colWidths=[3*72, 2*72])
         trator_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold')
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('SPAN', (0, 3), (1, 3)),
+            ('GRID', (0, 3), (1, 3), 0, colors.white)
         ]))
         story.append(trator_table)
-        story.append(Spacer(1, 12))
 
-    # Gráfico de Potência vs. Velocidade
-    story.append(Paragraph("<b>Potência de Tração vs. Velocidade de Operação</b>", styles['SubtitleStyle']))
-    story.append(Paragraph("O gráfico abaixo ilustra a potência de tração necessária em função da velocidade, calculada com base nos parâmetros de solo e implemento fornecidos.", styles['BodyStyle']))
-    
-    try:
-        velocidades_kmh = [Decimal(i) for i in range(1, 11)]
-        dados_potencia = []
-        for v_kmh in velocidades_kmh:
-            if calculo.implemento.tipo == 'dente':
-                P_total, _ = _calculate_tine_force(calculo.solo, calculo.implemento, True, v_kmh)
-            elif calculo.implemento.tipo == 'disco':
-                P_total, _, _ = _calculate_disc_force(calculo.solo, calculo.implemento)
-            
-            v_ms = v_kmh / Decimal('3.6')
-            potencia_kW = (P_total * v_ms) / Decimal('1000')
-            dados_potencia.append(float(potencia_kW))
-
-        drawing = Drawing(400, 200)
-        chart = SampleHorizontalLineChart()
-        chart.x = 50
-        chart.y = 30
-        chart.height = 125
-        chart.width = 300
-        chart.data = [dados_potencia]
-        chart.lines[0].strokeColor = colors.red
-        chart.lines[0].name = 'Potência em kW'
-        chart.categoryAxis.categoryNames = [f'{v} km/h' for v in velocidades_kmh]
-        chart.categoryAxis.labels.boxAnchor = 'n'
-        chart.valueAxis.valueMin = 0
-        chart.valueAxis.valueMax = max(dados_potencia) * 1.2 if dados_potencia else 10
-        chart.valueAxis.valueStep = max(dados_potencia) / 5 if max(dados_potencia) > 0 else 2
-        chart.categoryAxis.labels.fontName = 'Helvetica'
-        drawing.add(chart)
-        story.append(drawing)
-    
-    except Exception as e:
-        story.append(Paragraph(f"<i>Erro ao gerar gráfico: {str(e)}</i>", styles['BodyStyle']))
+    # Rodapé
+    story.append(Spacer(1, 20))
+    story.append(Paragraph("Relatório gerado automaticamente pelo Sistema", styles['BodyStyle']))
+    story.append(Paragraph("Metodologia baseada no curso Trator-Implemento do Departamento de Máquinas da Faculdade de Engenharia Agrícola da Unicamp", styles['BodyStyle']))
+    story.append(Paragraph("Responsável: André Luiz Bandeli Júnior. ", styles['BodyStyle']))
 
     doc.build(story)
     return response

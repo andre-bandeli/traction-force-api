@@ -19,13 +19,19 @@ class Solo(models.Model):
     def __str__(self):
         return f"Solo de {self.usuario.username}: {self.nome}"
 
-# Adicionamos um modelo para o Trator, tornando o sistema mais modular
 class Trator(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nome = models.CharField(max_length=100)
     massa_trator = models.DecimalField(max_digits=10, decimal_places=2, help_text="Massa total do trator (kg)")
     potencia_motor = models.DecimalField(max_digits=10, decimal_places=2, help_text="Potência nominal do motor (CV)")
     raio_roda = models.DecimalField(max_digits=5, decimal_places=2, help_text="Raio da roda motriz (m)")
+    lastro_atual = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Lastro atual do trator (kg) - opcional"
+    )
 
     def __str__(self):
         return f"Trator de {self.usuario.username}: {self.nome}"
@@ -75,17 +81,14 @@ class Calculo(models.Model):
     # Relacionamento: cada cálculo pertence a um usuário
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     
-    # Relacionamento com os modelos Solo, Implemento e Trator
     solo = models.ForeignKey(Solo, on_delete=models.CASCADE)
     implemento = models.ForeignKey(Implemento, on_delete=models.CASCADE)
     trator = models.ForeignKey(Trator, on_delete=models.CASCADE, null=True, blank=True)
     
-    # Campos para armazenar os resultados
     resultado = models.DecimalField(max_digits=10, decimal_places=2)
     profundidade_critica = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
     velocidade_kmh = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     
-    # NOVOS CAMPOS: resultados da otimização do trator
     patinagem_calculada = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     eficiencia_tracao_calculada = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     potencia_necessaria_cv = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
