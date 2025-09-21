@@ -20,7 +20,7 @@ from reportlab.graphics.charts.linecharts import SampleHorizontalLineChart
 G = Decimal('9.81')  # m/s^2
 
 # --- Funções Auxiliares de Cálculo ---
-def _calculate_coefficients(solo, implemento, d, w):
+def _calculate_coefficients(solo, implemento, d):
     """Calcula os coeficientes adimensionais para ferramentas de dente."""
     try:
         c = Decimal(str(solo.coesao))
