@@ -1,3 +1,4 @@
+# urls.py
 from django.urls import path
 from . import views
 
@@ -21,4 +22,7 @@ urlpatterns = [
     # Rotas gerais e de administração
     path('admin-app/', views.admin_view, name='admin_view'),
     path('', views.home_view, name='home'),
+    
+    # Nova rota para a calculadora simplificada
+    path('calculadora-simplificada/', views.calculadora_simplificada, name='calculadora_simplificada'),
 ]

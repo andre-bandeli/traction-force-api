@@ -19,8 +19,207 @@ from reportlab.graphics.charts.linecharts import SampleHorizontalLineChart
 # Constantes universais
 G = Decimal('9.81')  # m/s^2
 
-# --- Funções Auxiliares de Cálculo ---
+# Dicionários de dados de referência (Hardcoded)
+SOLO_REF_DATA = {
+    'argiloso': {
+        'coesao': Decimal('17.5'),
+        'adesao': Decimal('15'),
+        'peso_especifico': Decimal('13.5'),
+        'angulo_atrito_interno': Decimal('22'),
+        'sobrecarga': Decimal('1')
+    },
+    'arenoso': {
+        'coesao': Decimal('2.5'),
+        'adesao': Decimal('0'),
+        'peso_especifico': Decimal('16.0'),
+        'angulo_atrito_interno': Decimal('32'),
+        'sobrecarga': Decimal('1')
+    },
+    'siltoso': {
+        'coesao': Decimal('10.0'),
+        'adesao': Decimal('8.0'),
+        'peso_especifico': Decimal('14.5'),
+        'angulo_atrito_interno': Decimal('27'),
+        'sobrecarga': Decimal('1')
+    },
+    'franco_arenoso': {
+        'coesao': Decimal('5.0'),
+        'adesao': Decimal('2.0'),
+        'peso_especifico': Decimal('15.5'),
+        'angulo_atrito_interno': Decimal('29'),
+        'sobrecarga': Decimal('1')
+    },
+    'franco_siltoso': {
+        'coesao': Decimal('12.0'),
+        'adesao': Decimal('10.0'),
+        'peso_especifico': Decimal('14.0'),
+        'angulo_atrito_interno': Decimal('25'),
+        'sobrecarga': Decimal('1')
+    },
+    'franco_argiloso': {
+        'coesao': Decimal('15.0'),
+        'adesao': Decimal('12.0'),
+        'peso_especifico': Decimal('13.0'),
+        'angulo_atrito_interno': Decimal('20'),
+        'sobrecarga': Decimal('1')
+    },
+    'pesado_argiloso': {
+        'coesao': Decimal('20.0'),
+        'adesao': Decimal('18.0'),
+        'peso_especifico': Decimal('12.5'),
+        'angulo_atrito_interno': Decimal('18'),
+        'sobrecarga': Decimal('1')
+    },
+    'seco_arenoso': {
+        'coesao': Decimal('1.0'),
+        'adesao': Decimal('0'),
+        'peso_especifico': Decimal('17.0'),
+        'angulo_atrito_interno': Decimal('35'),
+        'sobrecarga': Decimal('1')
+    },
+    'humus': {
+        'coesao': Decimal('8.0'),
+        'adesao': Decimal('6.0'),
+        'peso_especifico': Decimal('11.0'),
+        'angulo_atrito_interno': Decimal('30'),
+        'sobrecarga': Decimal('1')
+    },
+    'solo_pedregoso': {
+        'coesao': Decimal('2.0'),
+        'adesao': Decimal('1.0'),
+        'peso_especifico': Decimal('19.0'),
+        'angulo_atrito_interno': Decimal('40'),
+        'sobrecarga': Decimal('1')
+    }
+}
 
+TRATOR_REF_DATA = {
+    'John Deere 6100J': {
+        'potencia_motor': Decimal('100'),
+        'massa_trator': Decimal('5300'),
+    },
+    'John Deere 7200J': {
+        'potencia_motor': Decimal('200'),
+        'massa_trator': Decimal('8500'),
+    },
+    'Massey Ferguson 4292': {
+        'potencia_motor': Decimal('92'),
+        'massa_trator': Decimal('4000'),
+    },
+    'John Deere 8370R': {
+        'potencia_motor': Decimal('370'),
+        'massa_trator': Decimal('14000'),
+    },
+    'Case IH Magnum 340': {
+        'potencia_motor': Decimal('340'),
+        'massa_trator': Decimal('12000'),
+    },
+    'Valtra A840': {
+        'potencia_motor': Decimal('85'),
+        'massa_trator': Decimal('3200'),
+    },
+    'New Holland TL75E': {
+        'potencia_motor': Decimal('75'),
+        'massa_trator': Decimal('3000'),
+    },
+    'Fendt 1050 Vario': {
+        'potencia_motor': Decimal('517'),
+        'massa_trator': Decimal('14000'),
+    },
+    'Kubota M7-171': {
+        'potencia_motor': Decimal('170'),
+        'massa_trator': Decimal('6500'),
+    },
+    'LS Tractor G100': {
+        'potencia_motor': Decimal('100'),
+        'massa_trator': Decimal('4500'),
+    },
+    'John Deere 5080E': {
+        'potencia_motor': Decimal('80'),
+        'massa_trator': Decimal('3500'),
+    }
+}
+
+IMPLEMENTO_REF_DATA = {
+    'arado_aiveca': {
+        'tipo': 'dente',
+        'nome': 'Arado de Aiveca',
+        'angulo_ataque': Decimal('45'),
+        'angulo_atrito_implemento': Decimal('15'),
+        'm_val': Decimal('2.5')
+    },
+    'escarificador': {
+        'tipo': 'dente',
+        'nome': 'Escarificador',
+        'angulo_ataque': Decimal('15'),
+        'angulo_atrito_implemento': Decimal('15'),
+        'm_val': Decimal('3.8')
+    },
+    'grade_disco': {
+        'tipo': 'disco',
+        'nome': 'Grade de Disco',
+        'raio_disco': Decimal('30'),
+        'angulo_varredura': Decimal('20'),
+        'angulo_clareira': Decimal('45'),
+        'angulo_ataque': Decimal('20'),
+        'angulo_atrito_implemento': Decimal('10')
+    },
+    'subsolador': {
+        'tipo': 'dente',
+        'nome': 'Subsolador',
+        'angulo_ataque': Decimal('25'),
+        'angulo_atrito_implemento': Decimal('15'),
+        'm_val': Decimal('2.1')
+    },
+    'enxada_rotativa': {
+        'tipo': 'dente',
+        'nome': 'Enxada Rotativa',
+        'angulo_ataque': Decimal('30'),
+        'angulo_atrito_implemento': Decimal('12'),
+        'm_val': Decimal('2.0')
+    },
+    'arado_de_disco': {
+        'tipo': 'disco',
+        'nome': 'Arado de Disco',
+        'raio_disco': Decimal('40'),
+        'angulo_varredura': Decimal('15'),
+        'angulo_clareira': Decimal('40'),
+        'angulo_ataque': Decimal('25'),
+        'angulo_atrito_implemento': Decimal('12')
+    },
+    'arado_fixo': {
+        'tipo': 'dente',
+        'nome': 'Arado Fixo',
+        'angulo_ataque': Decimal('50'),
+        'angulo_atrito_implemento': Decimal('15'),
+        'm_val': Decimal('2.8')
+    },
+    'cultivador': {
+        'tipo': 'dente',
+        'nome': 'Cultivador',
+        'angulo_ataque': Decimal('20'),
+        'angulo_atrito_implemento': Decimal('10'),
+        'm_val': Decimal('3.0')
+    },
+    'grade_niveladora': {
+        'tipo': 'disco',
+        'nome': 'Grade Niveladora',
+        'raio_disco': Decimal('25'),
+        'angulo_varredura': Decimal('15'),
+        'angulo_clareira': Decimal('30'),
+        'angulo_ataque': Decimal('15'),
+        'angulo_atrito_implemento': Decimal('8')
+    },
+    'sulcador': {
+        'tipo': 'dente',
+        'nome': 'Sulcador',
+        'angulo_ataque': Decimal('35'),
+        'angulo_atrito_implemento': Decimal('15'),
+        'm_val': Decimal('2.5')
+    }
+}
+
+# --- Funções Auxiliares de Cálculo ---
 def _calculate_beta_critico(m, alpha):
     """
     Calcula β crítico conforme:
@@ -444,8 +643,6 @@ def _optimize_tractor(trator, forca_tracao, velocidade_kmh):
     except Exception as e:
         raise Exception(f'Erro na otimização do trator: {e}')
 
-# --- Views (mantidas iguais, apenas mudando as chamadas das funções) ---
-
 @login_required
 def criar_solo(request):
     if request.method == 'POST':
@@ -658,6 +855,105 @@ def realizar_calculo(request):
             messages.error(request, mensagem_erro)
 
     return render(request, 'calculos/realizar_calculo.html', context)
+
+# Classe para simular o comportamento dos objetos do banco de dados
+class SimulatedObject:
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+    
+# --- NOVA VIEW PARA A CALCULADORA GRATUITA ---
+def calculadora_simplificada(request):
+    resultado_implemento = None
+    resultado_trator = {}
+    
+    if request.method == 'POST':
+        try:
+            tipo_solo = request.POST.get('tipo_solo')
+            modelo_trator = request.POST.get('modelo_trator')
+            tipo_implemento = request.POST.get('tipo_implemento')
+            
+            # Conversão de unidades de cm para m
+            profundidade_m = Decimal(request.POST.get('profundidade')) / Decimal('100')
+            largura_m = Decimal(request.POST.get('largura')) / Decimal('100')
+            espacamento_m = Decimal(request.POST.get('espacamento', '0')) / Decimal('100')
+            
+            numero_ferramentas = int(request.POST.get('numero_ferramentas', '1'))
+            velocidade_kmh = Decimal(request.POST.get('velocidade_kmh'))
+            lastro_user = Decimal(request.POST.get('lastro', '0'))
+
+            if profundidade_m <= 0 or largura_m <= 0:
+                messages.error(request, "Profundidade e Largura de Trabalho devem ser maiores que zero.")
+                return redirect('calculadora_simplificada')
+            
+            if tipo_implemento == 'grade_disco' and espacamento_m <= 0:
+                messages.error(request, "O espaçamento é obrigatório para implementos de disco.")
+                return redirect('calculadora_simplificada')
+            
+            solo = SimulatedObject(SOLO_REF_DATA[tipo_solo])
+            
+            implemento_data = IMPLEMENTO_REF_DATA[tipo_implemento]
+            implemento_data.update({
+                'profundidade': profundidade_m,
+                'largura': largura_m,
+                'espacamento': espacamento_m,
+                'numero_ferramentas': numero_ferramentas
+            })
+            implemento = SimulatedObject(implemento_data)
+            
+            trator_data = TRATOR_REF_DATA[modelo_trator]
+            trator_data.update({'lastro_atual': lastro_user})
+            trator = SimulatedObject(trator_data)
+            
+            profundidade_critica = None
+            if implemento.tipo == 'dente':
+                D_single, profundidade_critica = _calculate_tine_force(
+                    solo, implemento, True, velocidade_kmh
+                )
+                
+                if implemento.numero_ferramentas and implemento.numero_ferramentas > 1:
+                    w = Decimal(str(implemento.largura))
+                    d = Decimal(str(implemento.profundidade))
+                    d_over_w = d / w if w > 0 else Decimal('inf')
+                    profundidade_para_multiplas = profundidade_critica if d_over_w > Decimal('6') else d
+                    D_implemento = _calculate_multiple_tines(solo, implemento, D_single, profundidade_para_multiplas)
+                else:
+                    D_implemento = D_single
+            elif implemento.tipo == 'disco':
+                D_implemento, _, _ = _calculate_disc_force(solo, implemento)
+            else:
+                raise ValueError("Tipo de implemento inválido.")
+            
+            resultado_trator = _optimize_tractor(trator, D_implemento, velocidade_kmh)
+            
+            context = {
+                'solo_opcoes': SOLO_REF_DATA.keys(),
+                'trator_opcoes': TRATOR_REF_DATA.keys(),
+                'implemento_opcoes': IMPLEMENTO_REF_DATA.keys(),
+                'solo': tipo_solo,
+                'trator': modelo_trator,
+                'implemento': implemento_data['nome'],
+                'profundidade': profundidade_m * Decimal('100'),
+                'largura': largura_m * Decimal('100'),
+                'espacamento': espacamento_m * Decimal('100'),
+                'numero_ferramentas': numero_ferramentas,
+                'velocidade_kmh': velocidade_kmh,
+                'lastro': lastro_user,
+                'resultado_implemento': f"{D_implemento:.2f} kN",
+                'resultado_trator': resultado_trator,
+            }
+            return render(request, 'calculos/calculadora_simplificada.html', context)
+        
+        except Exception as e:
+            messages.error(request, f"Erro no cálculo. Verifique os dados de entrada. Detalhe: {e}")
+            return redirect('calculadora_simplificada')
+
+    context = {
+        'solo_opcoes': SOLO_REF_DATA.keys(),
+        'trator_opcoes': TRATOR_REF_DATA.keys(),
+        'implemento_opcoes': IMPLEMENTO_REF_DATA.keys()
+    }
+    return render(request, 'calculos/calculadora_simplificada.html', context)
 
 @login_required
 def listar_calculos(request):

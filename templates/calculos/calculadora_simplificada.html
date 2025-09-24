@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container mt-5 p-5">
+    <h2>Calculadora Simplificada</h2>
+    <p class="lead">Calcule a força de tração e otimize seu conjunto trator-implemento com dados de referência.</p>
+    <hr>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-danger" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Dados de Entrada</h4>
+            <form method="post" class="form">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="id_tipo_solo" class="form-label">Tipo de Solo</label>
+                    <select name="tipo_solo" id="id_tipo_solo" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        {% for solo in solo_opcoes %}
+                            <option value="{{ solo }}">{{ solo|capfirst }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_modelo_trator" class="form-label">Modelo do Trator</label>
+                    <select name="modelo_trator" id="id_modelo_trator" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        {% for trator in trator_opcoes %}
+                            <option value="{{ trator }}">{{ trator }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_lastro" class="form-label">Lastro Atual (kg)</label>
+                    <input type="number" step="0.01" class="form-control" id="id_lastro" name="lastro" value="0">
+                    <div class="form-text">Adicione o lastro do trator para um cálculo mais preciso.</div>
+                </div>
+
+
+                
+                <div class="mb-3">
+                    <label for="id_tipo_implemento" class="form-label">Tipo de Implemento</label>
+                    <select name="tipo_implemento" id="id_tipo_implemento" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        {% for implemento in implemento_opcoes %}
+                            <option value="{{ implemento }}">{{ implemento|capfirst }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_profundidade" class="form-label">Profundidade de Trabalho (cm)</label>
+                    <input type="number" step="0.01" class="form-control" id="id_profundidade" name="profundidade" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_largura" class="form-label">Largura da Ferramenta (cm)</label>
+                    <input type="number" step="0.01" class="form-control" id="id_largura" name="largura" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_espacamento" class="form-label">Espaçamento entre Hastes/Discos (cm)</label>
+                    <input type="number" step="0.01" class="form-control" id="id_espacamento" name="espacamento">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_numero_ferramentas" class="form-label">Número de Ferramentas</label>
+                    <input type="number" class="form-control" id="id_numero_ferramentas" name="numero_ferramentas" value="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_velocidade_kmh" class="form-label">Velocidade de Operação (km/h)</label>
+                    <input type="number" step="0.01" class="form-control" id="id_velocidade_kmh" name="velocidade_kmh" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Calcular</button>
+            </form>
+        </div>
+        
+        <div class="col-md-6">
+            {% if resultado_implemento %}
+                <h4 class="mt-4 mt-md-0">Resultado do Cálculo</h4>
+                <div class="alert alert-success mt-3">
+                    <h5 class="alert-heading">Força de Tração Necessária: {{ resultado_implemento }}</h5>
+                    <p>Essa é a força total que o seu trator precisa aplicar para operar o implemento com os parâmetros informados.</p>
+                </div>
+
+                <h4 class="mt-4">Otimização Trator-Implemento</h4>
+                <table class="table table-bordered table-striped">
+                    <tbody>
+                        <tr>
+                            <td>**Patinagem Calculada:**</td>
+                            <td>{{ resultado_trator.patinagem_calculada }}%</td>
+                        </tr>
+                        <tr>
+                            <td>**Eficiência de Tração:**</td>
+                            <td>{{ resultado_trator.eficiencia_tracao_calculada }}%</td>
+                        </tr>
+                        <tr>
+                            <td>**Potência Necessária:**</td>
+                            <td>{{ resultado_trator.potencia_necessaria_cv }} cv</td>
+                        </tr>
+                        <tr>
+                            <td>**Lastro Ideal:**</td>
+                            <td>{{ resultado_trator.lastro_ideal_kg }} kg</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small">Os valores de patinagem e eficiência de tração são estimativas. A potência necessária compara a força de tração com a potência nominal do trator. O lastro ideal é uma sugestão para otimizar o desempenho.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
