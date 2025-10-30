@@ -19,77 +19,77 @@ from reportlab.graphics.charts.linecharts import SampleHorizontalLineChart
 # Constantes universais
 G = Decimal('9.81')  # m/s^2
 
-# Dicionários de dados de referência (Hardcoded)
+# Dicionários de dados de referência
 SOLO_REF_DATA = {
     'argiloso': {
         'coesao': Decimal('17.5'),
         'adesao': Decimal('15'),
-        'peso_especifico': Decimal('13.5'),
-        'angulo_atrito_interno': Decimal('22'),
-        'sobrecarga': Decimal('1')
+        'peso_especifico': Decimal('17.0'),
+        'angulo_atrito_interno': Decimal('18'),
+        'sobrecarga': Decimal('15')
     },
     'arenoso': {
         'coesao': Decimal('2.5'),
         'adesao': Decimal('0'),
         'peso_especifico': Decimal('16.0'),
         'angulo_atrito_interno': Decimal('32'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('10')
     },
     'siltoso': {
         'coesao': Decimal('10.0'),
         'adesao': Decimal('8.0'),
         'peso_especifico': Decimal('14.5'),
         'angulo_atrito_interno': Decimal('27'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('12')
     },
     'franco_arenoso': {
         'coesao': Decimal('5.0'),
         'adesao': Decimal('2.0'),
         'peso_especifico': Decimal('15.5'),
         'angulo_atrito_interno': Decimal('29'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('10')
     },
     'franco_siltoso': {
         'coesao': Decimal('12.0'),
         'adesao': Decimal('10.0'),
         'peso_especifico': Decimal('14.0'),
         'angulo_atrito_interno': Decimal('25'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('12')
     },
     'franco_argiloso': {
         'coesao': Decimal('15.0'),
         'adesao': Decimal('12.0'),
-        'peso_especifico': Decimal('13.0'),
+        'peso_especifico': Decimal('16.0'),
         'angulo_atrito_interno': Decimal('20'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('15')
     },
     'pesado_argiloso': {
         'coesao': Decimal('20.0'),
         'adesao': Decimal('18.0'),
-        'peso_especifico': Decimal('12.5'),
+        'peso_especifico': Decimal('19'),
         'angulo_atrito_interno': Decimal('18'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('20')
     },
     'seco_arenoso': {
         'coesao': Decimal('1.0'),
         'adesao': Decimal('0'),
         'peso_especifico': Decimal('17.0'),
         'angulo_atrito_interno': Decimal('35'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('8')
     },
     'humus': {
         'coesao': Decimal('8.0'),
         'adesao': Decimal('6.0'),
         'peso_especifico': Decimal('11.0'),
         'angulo_atrito_interno': Decimal('30'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('5')
     },
     'solo_pedregoso': {
         'coesao': Decimal('2.0'),
         'adesao': Decimal('1.0'),
         'peso_especifico': Decimal('19.0'),
         'angulo_atrito_interno': Decimal('40'),
-        'sobrecarga': Decimal('1')
+        'sobrecarga': Decimal('15')
     }
 }
 
@@ -151,9 +151,9 @@ IMPLEMENTO_REF_DATA = {
     'escarificador': {
         'tipo': 'dente',
         'nome': 'Escarificador',
-        'angulo_ataque': Decimal('15'),
+        'angulo_ataque': Decimal('25'),
         'angulo_atrito_implemento': Decimal('15'),
-        'm_val': Decimal('3.8')
+        'm_val': Decimal('3.2')
     },
     'grade_disco': {
         'tipo': 'disco',
@@ -169,7 +169,7 @@ IMPLEMENTO_REF_DATA = {
         'nome': 'Subsolador',
         'angulo_ataque': Decimal('25'),
         'angulo_atrito_implemento': Decimal('15'),
-        'm_val': Decimal('2.1')
+        'm_val': Decimal('3.5')
     },
     'enxada_rotativa': {
         'tipo': 'dente',
@@ -1157,8 +1157,7 @@ def gerar_relatorio_pdf(request, calculo_id):
     # Rodapé
     story.append(Spacer(1, 20))
     story.append(Paragraph("Relatório gerado automaticamente pelo Sistema", styles['BodyStyle']))
-    story.append(Paragraph("Metodologia baseada no curso Trator-Implemento do Departamento de Máquinas da Faculdade de Engenharia Agrícola da Unicamp", styles['BodyStyle']))
-    story.append(Paragraph("Responsável: André Luiz Bandeli Júnior. ", styles['BodyStyle']))
+    story.append(Paragraph("Elaborado por: André Luiz Bandeli Júnior. ", styles['BodyStyle']))
 
     doc.build(story)
     return response
