@@ -47,8 +47,24 @@
                     <div class="form-text">Adicione o lastro do trator para um cálculo mais preciso.</div>
                 </div>
 
+                <div class="mb-3">
+                    <label for="id_altura_barra" class="form-label">Altura da Barra de Tração (m)</label>
+                    <input type="number" step="0.001" class="form-control" id="id_altura_barra" name="altura_barra_tracao" value="0.500">
+                    <div class="form-text">Distância vertical do solo até o ponto de engate (típico: 0,45–0,55 m).</div>
+                </div>
 
-                
+                <div class="mb-3">
+                    <label for="id_entre_eixos" class="form-label">Distância entre Eixos (m)</label>
+                    <input type="number" step="0.001" class="form-control" id="id_entre_eixos" name="distancia_entre_eixos" value="2.500">
+                    <div class="form-text">Distância entre o eixo dianteiro e o traseiro do trator.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_peso_dianteiro" class="form-label">Peso no Eixo Dianteiro (kN)</label>
+                    <input type="number" step="0.01" class="form-control" id="id_peso_dianteiro" name="peso_dianteiro" value="0">
+                    <div class="form-text">Peso estático sobre o eixo dianteiro. Consulte o manual do trator.</div>
+                </div>
+
                 <div class="mb-3">
                     <label for="id_tipo_implemento" class="form-label">Tipo de Implemento</label>
                     <select name="tipo_implemento" id="id_tipo_implemento" class="form-select" required>
@@ -100,19 +116,19 @@
                 <table class="table table-bordered table-striped">
                     <tbody>
                         <tr>
-                            <td>**Patinagem Calculada:**</td>
+                            <td>Patinagem Calculada:</td>
                             <td>{{ resultado_trator.patinagem_calculada }}%</td>
                         </tr>
                         <tr>
-                            <td>**Eficiência de Tração:**</td>
+                            <td>Eficiência de Tração:</td>
                             <td>{{ resultado_trator.eficiencia_tracao_calculada }}%</td>
                         </tr>
                         <tr>
-                            <td>**Potência Necessária:**</td>
+                            <td>Potência Necessária:</td>
                             <td>{{ resultado_trator.potencia_necessaria_cv }} cv</td>
                         </tr>
                         <tr>
-                            <td>**Lastro Ideal:**</td>
+                            <td>Lastro Ideal:</td>
                             <td>{{ resultado_trator.lastro_ideal_kg }} kg</td>
                         </tr>
                     </tbody>
