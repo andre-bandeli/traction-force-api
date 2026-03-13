@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+        <div>
+            <h2 class="h4 fw-bold mb-0 text-uppercase">
+                <i class="bi bi-tools me-2"></i>Frota: Implementos e Ferramentas
+            </h2>
+            <p class="text-muted small mb-0">Gerenciamento de hastes, dentes e discos cadastrados para simulação.</p>
+        </div>
+        <a href="{% url 'criar_implemento' %}" class="btn btn-primary btn-sm rounded-0 fw-bold">
+            <i class="bi bi-plus-lg me-1"></i> ADICIONAR EQUIPAMENTO
+        </a>
+    </div>
+
+    <div class="card rounded-0 border-dark shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-secondary">
+                    <tr class="small text-uppercase">
+                        <th class="ps-3 py-3 border-dark">Equipamento</th>
+                        <th class="py-3 border-dark text-center">Tipo</th>
+                        <th class="py-3 border-dark text-center">Largura ($w$)</th>
+                        <th class="py-3 border-dark text-center">Profundidade ($d$)</th>
+                        <th class="py-3 border-dark text-center">Ataque ($\alpha$)</th>
+                        <th class="py-3 border-dark text-end pe-3">Gerenciamento</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    {% for implemento in implementos %}
+                    <tr class="align-middle">
+                        <td class="ps-3">
+                            <span class="fw-bold text-dark">{{ implemento.nome }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if implemento.tipo == 'dente' %}bg-dark{% else %}bg-info text-dark{% endif %} rounded-0 text-uppercase" style="font-size: 0.7rem;">
+                                {{ implemento.tipo }}
+                            </span>
+                        </td>
+                        <td class="text-center font-monospace">{{ implemento.largura }} m</td>
+                        <td class="text-center font-monospace">{{ implemento.profundidade }} m</td>
+                        <td class="text-center font-monospace">
+                            {% if implemento.angulo_ataque %}{{ implemento.angulo_ataque }}º{% else %}---{% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="btn-group">
+                                <a href="{% url 'editar_implemento' implemento.id %}" class="btn btn-outline-dark btn-sm rounded-0 px-3">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-sm rounded-0 px-3" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ implemento.id }}">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="confirmDeleteModal{{ implemento.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content rounded-0 border-dark">
+                                <div class="modal-header bg-danger text-white rounded-0 border-0">
+                                    <h5 class="modal-title h6 fw-bold text-uppercase">Remover Equipamento</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <p class="mb-0">Confirmar exclusão de <strong>{{ implemento.nome }}</strong>?</p>
+                                    <small class="text-muted">Isso afetará cálculos futuros que utilizem este implemento.</small>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-light border rounded-0 px-4" data-bs-dismiss="modal">CANCELAR</button>
+                                    <form action="{% url 'deletar_implemento' implemento.id %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger rounded-0 px-4 fw-bold">REMOVER</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-gear-wide-connected fs-2 d-block mb-2"></i>
+                            Nenhum implemento cadastrado no sistema.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table th { font-size: 0.75rem; letter-spacing: 0.05em; border-bottom-width: 2px !important; }
+    .table td { border-bottom-color: #dee2e6; }
+    .font-monospace { font-family: 'JetBrains Mono', 'Courier New', monospace !important; font-size: 0.85rem; }
+    .badge { letter-spacing: 1px; }
+    .btn-group .btn { border-color: #dee2e6; }
+    .btn-group .btn:hover { border-color: #212529; }
+</style>
+{% endblock %}

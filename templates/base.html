@@ -1,0 +1,212 @@
+{% load static %}
+{% load bootstrap5 %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Adequação Trator-Implemento</title>
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0d3b1e;
+            --secondary-color: #ffc107;
+            --accent-color: #1e6a3c;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f4f7f5;
+        }
+        
+        .main-content {
+            flex: 1 0 auto;
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+        }
+        
+        .agrix-navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 0.8rem 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: var(--secondary-color) !important;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            color: rgba(255,255,255,0.85) !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover, .dropdown-item:hover {
+            color: #fff !important;
+            background-color: rgba(14, 13, 13, 0.795);
+        }
+
+        .nav-link:hover a, .dropdown-item:hover a {
+            color: #000000
+            
+        }
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+
+        .dropdown-item {
+            border-radius: 4px;
+            padding: 0.6rem 1rem;
+            font-weight: 500;
+        }
+        
+        .nav-link.active {
+            background-color: var(--secondary-color) !important;
+            color: #000 !important;
+        }
+        
+        .user-welcome {
+            color: var(--secondary-color) !important;
+            font-weight: 600;
+        }
+        
+        .agrix-footer {
+            background-color: var(--dark-color);
+            color: #adb5bd;
+            padding: 3rem 0 1.5rem;
+        }
+
+        .footer-heading {
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg agrix-navbar navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="bi bi-gear-fill me-2"></i>TractorLab
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                            <i class="bi bi-house-door me-1"></i>Início
+                        </a>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'solo' in request.resolver_match.url_name %}active{% endif %}" href="#" id="soloDrop" data-bs-toggle="dropdown">
+                            <i class="bi bi-layers me-1"></i>Solos
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'listar_solos' %}"><i class="bi bi-list-ul me-2"></i>Gerenciar Solos</a></li>
+                            <li><a class="dropdown-item" href="{% url 'criar_solo' %}"><i class="bi bi-plus-circle me-2"></i>Novo Cadastro</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'implemento' in request.resolver_match.url_name %}active{% endif %}" href="#" id="impDrop" data-bs-toggle="dropdown">
+                            <i class="bi bi-tools me-1"></i>Implementos
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'listar_implementos' %}"><i class="bi bi-list-ul me-2"></i>Ver Inventário</a></li>
+                            <li><a class="dropdown-item" href="{% url 'criar_implemento' %}"><i class="bi bi-plus-circle me-2"></i>Adicionar Novo</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'calculo' in request.resolver_match.url_name %}active{% endif %}" href="#" id="calcDrop" data-bs-toggle="dropdown">
+                            <i class="bi bi-calculator me-1"></i>Engenharia
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'realizar_calculo' %}"><i class="bi bi-play-circle me-2"></i>Novo Cálculo</a></li>
+                            <li><a class="dropdown-item" href="{% url 'listar_calculos' %}"><i class="bi bi-clock-history me-2"></i>Histórico de Projetos</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'calculadora_simplificada' %}"><i class="bi bi-lightning-charge me-2"></i>Cálculo Rápido (API)</a></li>
+                        </ul>
+                    </li>
+
+                    {% if user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_view' %}"><i class="bi bi-shield-lock me-1"></i>Admin</a>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav ms-auto align-items-center">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item me-3">
+                        <span class="user-welcome">
+                            <i class="bi bi-person-check me-1"></i>{{ user.username }}
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-warning btn-sm" href="{% url 'logout' %}">Sair</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="btn btn-warning btn-sm" href="{% url 'login' %}">Entrar</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <footer class="agrix-footer">
+        <div class="container text-center text-md-start">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h5 class="footer-heading">TractionLab</h5>
+                    <p>Tecnologia de ponta para análise de torque e eficiência tratória. Otimizando o campo com ciência de dados.</p>
+                </div>
+                <div class="col-md-4 mb-4 text-md-center">
+                    <h5 class="footer-heading">Acesso Rápido</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'realizar_calculo' %}" class="text-decoration-none text-muted">Simulação</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted">Documentação Técnica</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4 text-md-end">
+                    <h5 class="footer-heading">Suporte</h5>
+                    <p><i class="bi bi-envelope me-2"></i> suporte@tractionlab.eng.br</p>
+                </div>
+            </div>
+            <div class="border-top border-secondary pt-3 mt-3">
+                <p class="small mb-0 text-center">© 2026 TractionLab Engineering. Desenvolvido para Engenharia Agrícola de Precisão.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
