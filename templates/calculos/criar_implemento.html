@@ -2,12 +2,140 @@
 {% load bootstrap5 %}
 
 {% block content %}
-<div class="container mt-5 p-5">
-    <h2>Cadastrar Novo Implemento</h2>
-    <form method="post">
-        {% csrf_token %}
-        {% bootstrap_form form %}
-        <button type="submit" class="btn btn-primary">Salvar Implemento</button>
-    </form>
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+            
+            <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+                <div>
+                    <h2 class="h4 fw-bold mb-0 text-uppercase">
+                        <i class="bi bi-tools text-primary me-2"></i>Configuração de Implemento
+                    </h2>
+                    <p class="text-muted small mb-0">Defina a geometria da ferramenta para análise de falha de solo.</p>
+                </div>
+                <a href="{% url 'listar_implementos' %}" class="btn btn-outline-dark btn-sm rounded-0">
+                    <i class="bi bi-arrow-left me-1"></i> VOLTAR
+                </a>
+            </div>
+
+            <form method="post" class="bg-white border p-4 shadow-sm">
+                {% csrf_token %}
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="fw-bold small text-uppercase">Nome do Equipamento</label>
+                        {{ form.nome }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold small text-uppercase">Tipo de Ferramenta</label>
+                        {{ form.tipo }} </div>
+
+                    <div class="col-12 mt-4">
+                        <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3" style="font-size: 0.75rem;">Dimensões Base</h6>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Largura (w) [m]</label>
+                        {{ form.largura }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Profundidade (d) [m]</label>
+                        {{ form.profundidade }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Ângulo de Atrito Solo-Ferramenta (\delta)</label>
+                        {{ form.angulo_atrito_implemento }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Ângulo Plano Falha (\beta)</label>
+                        {{ form.angulo_plano_falha }}
+                    </div>
+
+                    <div id="secao-dente" class="col-12 mt-4" style="display: none;">
+                        <div class="p-3 border-start border-primary border-3 bg-light">
+                            <h6 class="fw-bold small text-uppercase mb-3 text-primary">Parâmetros de Hastes (Godwin/Spoor)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="small fw-bold">Ângulo de Ataque (\alpha)</label>
+                                    {{ form.angulo_ataque }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small fw-bold">Coef. Distância (m)</label>
+                                    {{ form.m_val }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small fw-bold">Nº de Ferramentas</label>
+                                    {{ form.numero_ferramentas }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small fw-bold">Espaçamento [m]</label>
+                                    {{ form.espacamento }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="secao-disco" class="col-12 mt-4" style="display: none;">
+                        <div class="p-3 border-start border-info border-3 bg-light">
+                            <h6 class="fw-bold small text-uppercase mb-3 text-info">Parâmetros de Discos</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="small fw-bold">Raio do Disco [m]</label>
+                                    {{ form.raio_disco }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="small fw-bold">Ângulo de Varredura</label>
+                                    {{ form.angulo_varredura }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="small fw-bold">Ângulo de Clareira</label>
+                                    {{ form.angulo_clareira }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-3 border-top d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-primary rounded-0 px-5 fw-bold">
+                        REGISTRAR IMPLEMENTO <i class="bi bi-save ms-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<script>
+    function toggleImplementoFields() {
+        const tipo = document.getElementById('id_tipo').value;
+        const secaoDente = document.getElementById('secao-dente');
+        const secaoDisco = document.getElementById('secao-disco');
+
+        if (tipo === 'dente') {
+            secaoDente.style.display = 'block';
+            secaoDisco.style.display = 'none';
+        } else if (tipo === 'disco') {
+            secaoDente.style.display = 'none';
+            secaoDisco.style.display = 'block';
+        } else {
+            secaoDente.style.display = 'none';
+            secaoDisco.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectTipo = document.getElementById('id_tipo');
+        selectTipo.addEventListener('change', toggleImplementoFields);
+        toggleImplementoFields();
+    });
+</script>
+
+<style>
+    .form-control-sm, .form-select-sm {
+        font-family: 'JetBrains Mono', monospace;
+        border-radius: 0;
+    }
+    .bg-light { background-color: #fcfcfc !important; }
+</style>
 {% endblock %}

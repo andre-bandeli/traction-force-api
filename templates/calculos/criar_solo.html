@@ -2,12 +2,101 @@
 {% load bootstrap5 %}
 
 {% block content %}
-<div class="container mt-5 p-5">
-    <h2>Cadastrar Novo Solo</h2>
-    <form method="post">
-        {% csrf_token %}
-        {% bootstrap_form form %}
-        <button type="submit" class="btn btn-primary">Salvar Solo</button>
-    </form>
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+                <div>
+                    <h2 class="h4 fw-bold mb-0 text-uppercase">
+                        <i class="bi bi-layers-half text-success me-2"></i>Cadastro de Perfil de Solo
+                    </h2>
+                    <p class="text-muted small mb-0">Insira os parâmetros geotécnicos para modelagem de tração.</p>
+                </div>
+                <a href="{% url 'listar_solos' %}" class="btn btn-outline-dark btn-sm rounded-0">
+                    <i class="bi bi-arrow-left me-1"></i> VOLTAR
+                </a>
+            </div>
+
+            <form method="post" class="bg-white border p-4 shadow-sm">
+                {% csrf_token %}
+                
+                <div class="row g-4">
+                    <div class="col-md-12">
+                        <label class="fw-bold small text-uppercase mb-1">Identificação do Perfil</label>
+                        {{ form.nome }}
+                        {% if form.nome.errors %}<div class="text-danger small">{{ form.nome.errors }}</div>{% endif %}
+                    </div>
+
+                    <hr class="my-4 opacity-10">
+
+                    <div class="col-md-6">
+                        <div class="p-3 border-start border-success border-3 bg-light bg-opacity-50">
+                            <h6 class="fw-bold small text-uppercase mb-3">Parâmetros de Cisalhamento</h6>
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold mb-1">Coesão (kPa)</label>
+                                {{ form.coesao }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold mb-1">Ângulo de Atrito Interno (°)</label>
+                                {{ form.angulo_atrito_interno }}
+                            </div>
+
+                            <div class="mb-0">
+                                <label class="small fw-bold mb-1">Adesão Solo-Ferramenta (kPa)</label>
+                                {{ form.adesao }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 border-start border-primary border-3 bg-light bg-opacity-50 h-100">
+                            <h6 class="fw-bold small text-uppercase mb-3">Propriedades Físicas</h6>
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold mb-1">Peso Específico (gamma) [kN/m³]</label>
+                                {{ form.peso_especifico }}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold mb-1">Índice de Cone - CI (kPa)</label>
+                                {{ form.indice_cone }}
+                            </div>
+
+                            <div class="mb-0">
+                                <label class="small fw-bold mb-1">Sobrecarga (q) [kPa]</label>
+                                {{ form.sobrecarga }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-3 border-top d-flex justify-content-end gap-2">
+                    <button type="reset" class="btn btn-light border rounded-0 px-4">LIMPAR</button>
+                    <button type="submit" class="btn btn-success rounded-0 px-5 fw-bold">
+                        SALVAR PERFIL TÉCNICO <i class="bi bi-check-lg ms-2"></i>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
 </div>
+
+<style>
+    .form-control-sm {
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    label {
+        color: #495057;
+    }
+
+    .form-control:focus {
+        border-color: #212529;
+        box-shadow: none;
+    }
+</style>
 {% endblock %}

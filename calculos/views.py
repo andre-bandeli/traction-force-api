@@ -8,6 +8,12 @@ from .models import Solo, Implemento, Calculo, Trator
 from reportlab.lib import colors
 from decimal import Decimal
 import math
+from reportlab.lib.colors import HexColor, aliceblue, whitesmoke, grey
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.lib.units import cm
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.lib.units import inch
 
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.pagesizes import letter
@@ -610,6 +616,30 @@ def listar_implementos(request):
 
 
 @login_required
+def editar_solo(request, solo_id):
+    solo = get_object_or_404(Solo, id=solo_id, usuario=request.user)
+    if request.method == 'POST':
+        form = SoloForm(request.POST, instance=solo)
+        if form.is_valid():
+            form.save()
+            return redirect('listar_solos')
+    else:
+        form = SoloForm(instance=solo)
+    return render(request, 'solos_form.html', {'form': form, 'editando': True})
+
+@login_required
+def editar_implemento(request, implemento_id):
+    implemento = get_object_or_404(Implemento, id=implemento_id, usuario=request.user)
+    if request.method == 'POST':
+        form = ImplementoForm(request.POST, instance=implemento)
+        if form.is_valid():
+            form.save()
+            return redirect('listar_implementos')
+    else:
+        form = ImplementoForm(instance=implemento)
+    return render(request, 'implemento_form.html', {'form': form, 'editando': True})
+
+@login_required
 def deletar_calculo(request, calculo_id):
     calculo = get_object_or_404(Calculo, id=calculo_id, usuario=request.user)
     if request.method == 'POST':
@@ -883,173 +913,131 @@ def admin_view(request):
 def home_view(request):
     return render(request, 'calculos/home.html')
 
-
 @login_required
 def gerar_relatorio_pdf(request, calculo_id):
     calculo = get_object_or_404(Calculo, id=calculo_id, usuario=request.user)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="relatorio_calculo_{calculo.id}.pdf"'
-    doc = SimpleDocTemplate(response, pagesize=letter)
+    response['Content-Disposition'] = f'attachment; filename="Relatorio_Tecnico_{calculo.id}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     story = []
-
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='HeaderStyle', fontSize=24, alignment=1, spaceAfter=24, textColor=colors.darkblue, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='TitleStyle', fontSize=18, alignment=1, spaceAfter=12))
-    styles.add(ParagraphStyle(name='SubtitleStyle', fontSize=12, alignment=0, spaceAfter=6, textColor=colors.darkblue, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='BodyStyle', fontSize=10, alignment=0, spaceAfter=4))
 
-    story.append(Paragraph("DynaTech", styles['HeaderStyle']))
-    story.append(Paragraph("Otimização Trator-Implemento", styles['HeaderStyle']))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph("Relatório de Cálculo", styles['TitleStyle']))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(f"<b>Usuário:</b> {request.user.get_full_name()}", styles['BodyStyle']))
-    story.append(Paragraph(f"<b>Data do Cálculo:</b> {calculo.data_criacao.strftime('%d/%m/%Y %H:%M')}", styles['BodyStyle']))
-    story.append(Spacer(1, 12))
+    # --- DEFINIÇÃO DE CORES E ESTILOS ---
+    COR_PRIMARIA = HexColor("#003366")  # Azul Marinho Técnico
+    COR_SECUNDARIA = HexColor("#F2F2F2")
+    
+    style_h1 = ParagraphStyle('H1', parent=styles['Heading1'], fontSize=18, textColor=COR_PRIMARIA, alignment=1, spaceAfter=20)
+    style_h2 = ParagraphStyle('H2', parent=styles['Heading2'], fontSize=14, textColor=COR_PRIMARIA, spaceBefore=15, spaceAfter=10)
+    style_text = ParagraphStyle('Text', fontSize=10, leading=12, spaceAfter=10)
+    style_label = ParagraphStyle('Label', fontSize=9, fontName='Helvetica-Bold')
 
-    if calculo.implemento.tipo == 'dente':
-        w = Decimal(str(calculo.implemento.largura))
-        d = Decimal(str(calculo.implemento.profundidade))
-        d_over_w = d / w if w > 0 else Decimal('inf')
+    # --- CABEÇALHO ---
+    story.append(Paragraph("DYNATECH - RELATÓRIO DE DESEMPENHO MECÂNICO", style_h1))
+    story.append(Paragraph(f"<b>Operador:</b> {request.user.get_full_name() or request.user.username} | <b>ID:</b> {calculo.id}", styles['Normal']))
+    story.append(Paragraph(f"<b>Data da Simulação:</b> {calculo.data_criacao.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+    story.append(Spacer(1, 15))
 
-        story.append(Paragraph("<b>Classificação da Ferramenta</b>", styles['SubtitleStyle']))
-        story.append(Paragraph(f"<b>Razão d/w:</b> {d_over_w:.2f}", styles['BodyStyle']))
-
-        if d_over_w < Decimal('0.5'):
-            tipo_class = "Ferramenta Larga (d/w < 0.5)"
-            metodo = "Equação de Reece simplificada (despreza adesão e inércia)"
-        elif Decimal('1') <= d_over_w <= Decimal('6'):
-            tipo_class = "Ferramenta Estreita (1 ≤ d/w ≤ 6)"
-            metodo = "Equação de Reece com efeito dos flancos laterais"
-        else:
-            tipo_class = "Ferramenta Muito Estreita (d/w > 6)"
-            metodo = "Equação de Reece com zona de fratura inferior (Godwin)"
-
-        story.append(Paragraph(f"<b>Classificação:</b> {tipo_class}", styles['BodyStyle']))
-        story.append(Paragraph(f"<b>Metodologia Aplicada:</b> {metodo}", styles['BodyStyle']))
-        story.append(Spacer(1, 12))
-
-    story.append(Paragraph("<b>Parâmetros do Solo</b>", styles['SubtitleStyle']))
-    solo_data = [
-        ["Nome:", calculo.solo.nome],
-        ["Coesão (c) [kPa]:", f"{calculo.solo.coesao}"],
-        ["Ângulo de Atrito Interno (φ) [°]:", f"{calculo.solo.angulo_atrito_interno}"],
-        ["Peso Específico (γ) [kN/m³]:", f"{calculo.solo.peso_especifico}"],
-        ["Sobrecarga (q) [kPa]:", f"{calculo.solo.sobrecarga}"],
-        ["Adesão (Ca) [kPa]:", f"{calculo.solo.adesao}"]
+    # --- SEÇÃO 1: PARÂMETROS DO SOLO ---
+    story.append(Paragraph("1. CARACTERIZAÇÃO DO SOLO", style_h2))
+    data_solo = [
+        [Paragraph("<b>Propriedade</b>", style_label), Paragraph("<b>Valor</b>", style_label), Paragraph("<b>Descrição Técnica</b>", style_label)],
+        ["Perfil de Solo", calculo.solo.nome, "Identificação mineralógica/textural."],
+        ["Coesão (c)", f"{calculo.solo.coesao} kPa", "Força de ligação entre as partículas do solo."],
+        ["Ângulo Atrito (φ)", f"{calculo.solo.angulo_atrito_interno}°", "Resistência ao cisalhamento interno."],
+        ["Peso Específico (γ)", f"{calculo.solo.peso_especifico} kN/m³", "Peso do solo por unidade de volume."],
+        ["Adesão (Ca)", f"{calculo.solo.adesao} kPa", "Atratividade entre solo e superfície metálica."],
+        ["Índice de Cone (CI)", f"{calculo.solo.indice_cone} kPa", "Resistência à penetração (Capacidade de suporte)."],
     ]
-    solo_table = Table(solo_data, colWidths=[3*72, 2*72])
-    solo_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey)
+    t_solo = Table(data_solo, colWidths=[4*cm, 3*cm, 11*cm])
+    t_solo.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), COR_PRIMARIA),
+        ('TEXTCOLOR', (0,0), (-1,0), whitesmoke),
+        ('GRID', (0,0), (-1,-1), 0.5, grey),
+        ('BACKGROUND', (0,1), (-1,-1), whitesmoke),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
     ]))
-    story.append(solo_table)
-    story.append(Spacer(1, 12))
+    story.append(t_solo)
 
-    story.append(Paragraph("<b>Parâmetros do Implemento</b>", styles['SubtitleStyle']))
-    implemento_data = [
-        ["Nome:", calculo.implemento.nome],
-        ["Largura (w) [m]:", f"{calculo.implemento.largura}"],
-        ["Profundidade (d) [m]:", f"{calculo.implemento.profundidade}"],
-        ["Tipo:", calculo.implemento.tipo.title()],
-        ["Ângulo de Ataque (α) [°]:", f"{calculo.implemento.angulo_ataque}"],
-        ["Ângulo de Atrito (δ) [°]:", f"{calculo.implemento.angulo_atrito_implemento}"],
-        ["Parâmetro m:", f"{calculo.implemento.m_val}"]
+    # --- SEÇÃO 2: PARÂMETROS DO IMPLEMENTO ---
+    story.append(Paragraph("2. ESPECIFICAÇÕES DO IMPLEMENTO", style_h2))
+    data_imp = [
+        [Paragraph("<b>Parâmetro</b>", style_label), Paragraph("<b>Valor</b>", style_label), Paragraph("<b>Configuração</b>", style_label)],
+        ["Implemento", calculo.implemento.nome, f"Tipo: {calculo.implemento.tipo.title()}"],
+        ["Profundidade (d)", f"{calculo.implemento.profundidade} m", f"Prof. Crítica (dc): {calculo.profundidade_critica or 'N/A'} m"],
+        ["Largura Unit. (w)", f"{calculo.implemento.largura} m", f"Nº Hastes/Discos: {calculo.implemento.numero_ferramentas or 1}"],
+        ["Ângulo Ataque (α)", f"{calculo.implemento.angulo_ataque}°", f"Atrito Solo-Metal (δ): {calculo.implemento.angulo_atrito_implemento}°"],
     ]
-
-    if calculo.implemento.numero_ferramentas:
-        implemento_data.append(["Número de Ferramentas:", f"{calculo.implemento.numero_ferramentas}"])
-    if calculo.implemento.espacamento:
-        implemento_data.append(["Espaçamento [m]:", f"{calculo.implemento.espacamento}"])
-
-    implemento_table = Table(implemento_data, colWidths=[3*72, 2*72])
-    implemento_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey)
+    t_imp = Table(data_imp, colWidths=[4*cm, 3*cm, 11*cm])
+    t_imp.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), HexColor("#333333")),
+        ('TEXTCOLOR', (0,0), (-1,0), whitesmoke),
+        ('GRID', (0,0), (-1,-1), 0.5, grey),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
     ]))
-    story.append(implemento_table)
-    story.append(Spacer(1, 12))
+    story.append(t_imp)
 
-    story.append(Paragraph("<b>Resultados do Cálculo</b>", styles['SubtitleStyle']))
-    story.append(Paragraph(f"<b>Força de Tração Total:</b> {calculo.resultado:.2f} kN", styles['BodyStyle']))
+    # --- SEÇÃO 3: RESULTADOS E GRÁFICOS ---
+    story.append(Paragraph("3. ANÁLISE DE PERFORMANCE E GRÁFICOS", style_h2))
+    
+    # Criando gráfico de Patinagem vs Eficiência
+    drawing = Drawing(400, 150)
+    bc = VerticalBarChart()
+    bc.x = 50
+    bc.y = 20
+    bc.height = 100
+    bc.width = 250
+    
+    # Valores convertidos para float
+    val_patinagem = float(calculo.patinagem_calculada or 0)
+    val_eficiencia = float(calculo.eficiencia_tracao_calculada or 0)
+    
+    bc.data = [[val_patinagem], [val_eficiencia]]
+    bc.valueAxis.valueMin = 0
+    bc.valueAxis.valueMax = 100
+    bc.valueAxis.valueStep = 20
+    bc.categoryAxis.categoryNames = ['KPIs de Tração']
+    
+    bc.bars[0].fillColor = HexColor("#E63946") # Vermelho: Patinagem
+    bc.bars[1].fillColor = HexColor("#2A9D8F") # Verde: Eficiência
+    drawing.add(bc)
 
-    if calculo.profundidade_critica and calculo.profundidade_critica != calculo.implemento.profundidade:
-        story.append(Paragraph(f"<b>Profundidade Crítica (dc):</b> {calculo.profundidade_critica:.3f} m", styles['BodyStyle']))
-        story.append(Paragraph(f"<b>Profundidade de Operação (d):</b> {calculo.implemento.profundidade} m", styles['BodyStyle']))
-        if calculo.profundidade_critica < Decimal(str(calculo.implemento.profundidade)):
-            story.append(Paragraph("⚠️ <b>Zona de fratura inferior ativa</b> (dc < d)", styles['BodyStyle']))
-        else:
-            story.append(Paragraph("✓ Sem zona de fratura inferior (dc ≥ d)", styles['BodyStyle']))
+    # Tabela de Resultados numéricos
+    res_data = [
+        [Paragraph("<b>FORÇA TOTAL DE TRAÇÃO</b>", style_label), f"{calculo.resultado:.2f} kN"],
+        [Paragraph("<b>PATINAGEM (Slip)</b>", style_label), f"{val_patinagem:.2f} %"],
+        [Paragraph("<b>EFICIÊNCIA TRATÓRIA</b>", style_label), f"{val_eficiencia:.2f} %"],
+        [Paragraph("<b>POTÊNCIA REQUERIDA</b>", style_label), f"{calculo.potencia_necessaria_cv:.2f} CV"],
+    ]
+    t_res = Table(res_data, colWidths=[6*cm, 4*cm])
+    t_res.setStyle(TableStyle([
+        ('LINEBELOW', (0,0), (-1,-1), 1, grey),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+    ]))
 
-    if calculo.velocidade_kmh:
-        velocidade_kmh = float(calculo.velocidade_kmh)
-        velocidade_ms = velocidade_kmh / 3.6
-        story.append(Paragraph(f"<b>Velocidade de Operação:</b> {velocidade_kmh:.2f} km/h ({velocidade_ms:.2f} m/s)", styles['BodyStyle']))
+    # Organizar Gráfico e Resultados lado a lado
+    story.append(Table([[drawing, t_res]], colWidths=[9*cm, 9*cm]))
+    
+    story.append(Paragraph(f"<font color='#E63946'>■</font> Patinagem  <font color='#2A9D8F'>■</font> Eficiência Tratória", 
+                           ParagraphStyle('Leg', fontSize=8, alignment=1)))
 
-        if calculo.implemento.tipo == 'dente' and d_over_w >= Decimal('1'):
-            try:
-                v_crit = _calculate_velocidade_critica(w, d)
-                v_ms = Decimal(str(calculo.velocidade_kmh)) / Decimal('3.6')
-                story.append(Paragraph(f"<b>Velocidade Crítica (Vcrit):</b> {v_crit:.2f} m/s", styles['BodyStyle']))
-                if v_ms >= v_crit:
-                    story.append(Paragraph("Efeito da adesão por velocidade considerado — modelo Godwin/Wheeler (v ≥ Vcrit)", styles['BodyStyle']))
-                else:
-                    story.append(Paragraph("Efeito da adesão por velocidade não aplicado (v < Vcrit)", styles['BodyStyle']))
-            except:
-                pass
-
-    if calculo.implemento.numero_ferramentas and calculo.implemento.numero_ferramentas > 1:
-        story.append(Spacer(1, 6))
-        story.append(Paragraph("<b>Análise de Múltiplas Ferramentas:</b>", styles['SubtitleStyle']))
-        story.append(Paragraph(f"<b>Número de ferramentas:</b> {calculo.implemento.numero_ferramentas}", styles['BodyStyle']))
-        story.append(Paragraph(f"<b>Espaçamento:</b> {calculo.implemento.espacamento} m", styles['BodyStyle']))
-
-        prof_analise = calculo.profundidade_critica if calculo.profundidade_critica else Decimal(str(calculo.implemento.profundidade))
-        s = Decimal(str(calculo.implemento.espacamento))
-
-        if prof_analise < s / Decimal('2'):
-            story.append(Paragraph("Sem sobreposição entre flancos (d < s/2)", styles['BodyStyle']))
-            story.append(Paragraph("Força total = Força unitária × Número de ferramentas", styles['BodyStyle']))
-        else:
-            story.append(Paragraph("⚠️ Com sobreposição entre flancos (d > s/2)", styles['BodyStyle']))
-            story.append(Paragraph("Correção aplicada usando ferramenta virtual — Godwin & O'Dogherty", styles['BodyStyle']))
-
-    story.append(Spacer(1, 12))
-
+    # --- SEÇÃO 4: DIAGNÓSTICO ---
     if calculo.trator:
-        story.append(Paragraph("<b>Otimização do Trator</b>", styles['SubtitleStyle']))
-        story.append(Paragraph("Modelo de tração: Brixius (1987) simplificado — GTR = NTR + MRR, MRR = 0,04, GTR_max = 0,75", styles['BodyStyle']))
-        trator_data_pdf = [
-            ["Trator:", calculo.trator.nome],
-            ["Massa [kg]:", f"{calculo.trator.massa_trator}"],
-            ["Potência [CV]:", f"{calculo.trator.potencia_motor}"],
-            ["", ""],
-            ["Patinagem (TRR) [%]:", f"{calculo.patinagem_calculada:.2f}" if calculo.patinagem_calculada is not None else "N/A"],
-            ["Eficiência de Tração (TE) [%]:", f"{calculo.eficiencia_tracao_calculada:.2f}" if calculo.eficiencia_tracao_calculada is not None else "N/A"],
-            ["Potência Necessária [CV]:", f"{calculo.potencia_necessaria_cv:.2f}" if calculo.potencia_necessaria_cv is not None else "N/A"],
-            ["Lastro Ideal [kg]:", f"{calculo.lastro_ideal_kg:.2f}" if calculo.lastro_ideal_kg is not None else "N/A"]
-        ]
-        trator_table = Table(trator_data_pdf, colWidths=[3*72, 2*72])
-        trator_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('SPAN', (0, 3), (1, 3)),
-            ('GRID', (0, 3), (1, 3), 0, colors.white)
-        ]))
-        story.append(trator_table)
+        story.append(Paragraph("4. DIAGNÓSTICO E RECOMENDAÇÕES", style_h2))
+        lastro_text = (
+            f"O trator <b>{calculo.trator.nome}</b> operando a {calculo.velocidade_kmh} km/h apresenta uma patinagem de "
+            f"{val_patinagem:.2f}%. Para otimizar a tração e reduzir o consumo de combustível, recomenda-se um lastro ideal de "
+            f"<b>{calculo.lastro_ideal_kg:.2f} kg</b>. Valores de patinagem fora da faixa de 8-15% indicam necessidade de ajuste de peso ou pressão dos pneus."
+        )
+        story.append(Paragraph(lastro_text, style_text))
 
-    story.append(Spacer(1, 20))
-    story.append(Paragraph("Relatório gerado automaticamente pelo Sistema DynaTech.", styles['BodyStyle']))
-    story.append(Paragraph("Elaborado por: André Luiz Bandeli Júnior.", styles['BodyStyle']))
+    # --- RODAPÉ ---
+    story.append(Spacer(1, 30))
+    story.append(Paragraph("Relatório gerado automaticamente pelo Sistema DynaTech.", style_text))
+    story.append(Paragraph("Responsável: André Luiz Bandeli Júnior", style_text))
 
     doc.build(story)
     return response

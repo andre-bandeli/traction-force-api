@@ -1,17 +1,30 @@
 from django import forms
 from .models import Solo, Implemento, Trator, Calculo
 
-class SoloForm(forms.ModelForm):
+class BaseTechnicalForm(forms.ModelForm):
+    """Classe base para aplicar estilos industriais em todos os forms"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
+                'class': 'form-control form-control-sm rounded-0 border-dark',
+                'placeholder': field.label
+            })
+
+class SoloForm(BaseTechnicalForm):
     class Meta:
         model = Solo
-        fields = ['nome', 'coesao', 'angulo_atrito_interno', 'peso_especifico', 'sobrecarga', 'adesao']
+        fields = ['nome', 'coesao', 'angulo_atrito_interno', 'peso_especifico', 'sobrecarga', 'adesao', 'indice_cone']
 
-class TratorForm(forms.ModelForm):
+class TratorForm(BaseTechnicalForm):
     class Meta:
         model = Trator
-        fields = ['nome', 'massa_trator', 'potencia_motor', 'raio_roda']
+        fields = [
+            'nome', 'massa_trator', 'potencia_motor', 'raio_roda', 
+            'altura_barra_tracao', 'distancia_entre_eixos', 'peso_dianteiro', 'lastro_atual'
+        ]
 
-class ImplementoForm(forms.ModelForm):
+class ImplementoForm(BaseTechnicalForm):
     class Meta:
         model = Implemento
         fields = [
@@ -22,27 +35,27 @@ class ImplementoForm(forms.ModelForm):
         ]
 
 class CalculoForm(forms.Form):
-    solo = forms.ModelChoiceField(queryset=Solo.objects.none(), label='Selecione o Solo')
-    implemento = forms.ModelChoiceField(queryset=Implemento.objects.none(), label='Selecione o Implemento')
+    solo = forms.ModelChoiceField(
+        queryset=Solo.objects.none(), 
+        label='Perfil de Solo',
+        widget=forms.Select(attrs={'class': 'form-select rounded-0 border-dark'})
+    )
+    implemento = forms.ModelChoiceField(
+        queryset=Implemento.objects.none(), 
+        label='Implemento Alvo',
+        widget=forms.Select(attrs={'class': 'form-select rounded-0 border-dark'})
+    )
     trator = forms.ModelChoiceField(
         queryset=Trator.objects.none(), 
         required=False,
-        label='Selecione o Trator',
-        help_text='Opcional. Selecione um trator para realizar a otimização de tração.'
+        label='Trator (Opcional)',
+        widget=forms.Select(attrs={'class': 'form-select rounded-0 border-dark'})
     )
     
     velocidade_kmh = forms.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        required=False,
-        label='Velocidade de Operação (km/h)',
-        help_text='Opcional. Preencha apenas se quiser considerar o efeito da velocidade no cálculo.'
-    )
-
-    incluir_velocidade = forms.BooleanField(
-        required=False,
-        label='Incluir Velocidade no Cálculo',
-        help_text='Marque para usar o valor de velocidade informado no cálculo.'
+        max_digits=5, decimal_places=2, required=False,
+        label='Velocidade Operacional',
+        widget=forms.NumberInput(attrs={'class': 'form-control rounded-0 border-dark', 'placeholder': 'km/h'})
     )
 
     def __init__(self, user, *args, **kwargs):
@@ -50,13 +63,3 @@ class CalculoForm(forms.Form):
         self.fields['solo'].queryset = Solo.objects.filter(usuario=user)
         self.fields['implemento'].queryset = Implemento.objects.filter(usuario=user)
         self.fields['trator'].queryset = Trator.objects.filter(usuario=user)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        incluir_velocidade = cleaned_data.get('incluir_velocidade')
-        velocidade_kmh = cleaned_data.get('velocidade_kmh')
-
-        if incluir_velocidade and not velocidade_kmh:
-            self.add_error('velocidade_kmh', 'Este campo é obrigatório quando a velocidade é incluída no cálculo.')
-        
-        return cleaned_data

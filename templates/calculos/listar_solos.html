@@ -2,74 +2,109 @@
 {% load bootstrap5 %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2>Meus Solos</h2>
-    <a href="{% url 'criar_solo' %}" class="btn btn-primary mb-3">Adicionar Novo Solo</a>
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Coesão (kN/m²)</th>
-                <th>Peso Específico (kN/m³)</th>
-                <th>Ângulo de Atrito (º)</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for solo in solos %}
-            <tr>
-                <td>{{ solo.nome }}</td>
-                <td>{{ solo.coesao }}</td>
-                <td>{{ solo.peso_especifico }}</td>
-                <td>{{ solo.angulo_atrito_interno }}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModalSolo{{ solo.id }}">
-                        Excluir
-                    </button>
-                </td>
-            </tr>
-            <div class="modal fade" id="confirmDeleteModalSolo{{ solo.id }}" tabindex="-1" aria-labelledby="confirmDeleteModalSoloLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="confirmDeleteModalSoloLabel">Confirmar Exclusão</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Tem certeza de que deseja excluir o solo "{{ solo.nome }}"?
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <form action="{% url 'deletar_solo' solo.id %}" method="post" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger">Excluir</button>
-                            </form>
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+        <div>
+            <h2 class="h4 fw-bold mb-0 text-uppercase">
+                <i class="bi bi-database me-2"></i>Database: Perfis de Solo
+            </h2>
+            <p class="text-muted small mb-0">Gerenciamento de parâmetros geotécnicos cadastrados.</p>
+        </div>
+        <a href="{% url 'criar_solo' %}" class="btn btn-success btn-sm rounded-0 fw-bold">
+            <i class="bi bi-plus-lg me-1"></i> NOVO REGISTRO
+        </a>
+    </div>
+
+    <div class="card rounded-0 border-dark shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr class="small text-uppercase">
+                        <th class="ps-3 py-3 border-0">Identificação</th>
+                        <th class="py-3 border-0 text-center">Coesão (kPa)</th>
+                        <th class="py-3 border-0 text-center">Peso Esp. (kN/m³)</th>
+                        <th class="py-3 border-0 text-center">Atrito Interno (º)</th>
+                        <th class="py-3 border-0 text-end pe-3">Gerenciamento</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    {% for solo in solos %}
+                    <tr class="align-middle">
+                        <td class="ps-3">
+                            <span class="fw-bold text-dark">{{ solo.nome }}</span>
+                        </td>
+                        <td class="text-center font-monospace">{{ solo.coesao }}</td>
+                        <td class="text-center font-monospace">{{ solo.peso_especifico }}</td>
+                        <td class="text-center font-monospace">{{ solo.angulo_atrito_interno }}</td>
+                        <td class="text-end pe-3">
+                            <div class="btn-group">
+                                <a href="{% url 'editar_solo' solo.id %}" class="btn btn-outline-dark btn-sm rounded-0 px-3">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-sm rounded-0 px-3" data-bs-toggle="modal" data-bs-target="#confirmDeleteModalSolo{{ solo.id }}">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="confirmDeleteModalSolo{{ solo.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content rounded-0 border-dark">
+                                <div class="modal-header bg-danger text-white rounded-0 border-0">
+                                    <h5 class="modal-title h6 fw-bold text-uppercase">Confirmar Exclusão</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <p class="mb-0">Deseja remover o perfil <strong>{{ solo.nome }}</strong> permanentemente?</p>
+                                    <small class="text-muted">Esta ação não poderá ser desfeita no banco de dados.</small>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-light border rounded-0 px-4" data-bs-dismiss="modal">CANCELAR</button>
+                                    <form action="{% url 'deletar_solo' solo.id %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger rounded-0 px-4 fw-bold">REMOVER</button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            {% empty %}
-            <tr>
-                <td colspan="5">Nenhum solo cadastrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            Nenhum solo registrado para o usuário atual.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-    <nav aria-label="Paginação">
-        <ul class="pagination justify-content-center">
+    {% if solos.paginator.num_pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination pagination-sm justify-content-center">
             {% if solos.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page=1">&laquo; Primeira</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ solos.previous_page_number }}">Anterior</a></li>
+                <li class="page-item"><a class="page-link border-dark text-dark rounded-0" href="?page=1">PRIMEIRA</a></li>
+                <li class="page-item"><a class="page-link border-dark text-dark rounded-0" href="?page={{ solos.previous_page_number }}">ANTERIOR</a></li>
             {% endif %}
 
-            <li class="page-item disabled"><span class="page-link">Página {{ solos.number }} de {{ solos.paginator.num_pages }}</span></li>
+            <li class="page-item disabled"><span class="page-link border-dark bg-dark text-white rounded-0 px-4">PÁGINA {{ solos.number }} / {{ solos.paginator.num_pages }}</span></li>
 
             {% if solos.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ solos.next_page_number }}">Próxima</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ solos.paginator.num_pages }}">Última &raquo;</a></li>
+                <li class="page-item"><a class="page-link border-dark text-dark rounded-0" href="?page={{ solos.next_page_number }}">PRÓXIMA</a></li>
+                <li class="page-item"><a class="page-link border-dark text-dark rounded-0" href="?page={{ solos.paginator.num_pages }}">ÚLTIMA</a></li>
             {% endif %}
         </ul>
     </nav>
+    {% endif %}
 </div>
+
+<style>
+    .table th { font-size: 0.75rem; letter-spacing: 0.05em; }
+    .table td { border-bottom-color: #dee2e6; }
+    .font-monospace { font-family: 'JetBrains Mono', 'Courier New', monospace !important; font-size: 0.9rem; }
+    .page-link:hover { background-color: #212529; color: #fff !important; }
+</style>
 {% endblock %}
